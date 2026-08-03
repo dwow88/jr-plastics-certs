@@ -15,13 +15,9 @@ exports.handler = async (event) => {
       return { statusCode: 500, body: JSON.stringify({ error: 'GROQ_API_KEY not configured' }) };
     }
 
-    const prompt = `You are extracting data from a JR Plastics supplier certification form image.
-Return ONLY a valid JSON object with these exact keys (use empty string "" if not found):
-po_number, pallet_number, railcar_number, date (YYYY-MM-DD), pieces, packer, operator,
-t1,t2,t3,t4,t5,t6,t7,t8,t9,t10,t11,t12,t13,t14,t15,t16,t17,t18,t19,t20,
-length, width, surface_finish, qc_date (YYYY-MM-DD), upf_receiver,
-recv_date (YYYY-MM-DD), recv_time (HH:MM).
-Return ONLY the JSON object, no markdown, no explanation.`;
+    const prompt = `Extract data from this JR Plastics certification form. Return ONLY valid JSON (no markdown).
+Use these keys: po_number, pallet_number, railcar_number, date, pieces, packer, operator, t1-t20, length, width, surface_finish, qc_date, upf_receiver, recv_date, recv_time.
+Use empty string for missing values. Return ONLY JSON.`;
 
     for (let attempt = 0; attempt < 3; attempt++) {
       try {
@@ -33,7 +29,7 @@ Return ONLY the JSON object, no markdown, no explanation.`;
           },
           body: JSON.stringify({
             model: 'qwen/qwen3.6-27b',
-            max_tokens: 1000,
+            max_tokens: 2000,
             messages: [{
               role: 'user',
               content: [
@@ -46,24 +42,32 @@ Return ONLY the JSON object, no markdown, no explanation.`;
 
         if (response.status === 429) {
           if (attempt < 2) { await new Promise(r => setTimeout(r, 8000)); continue; }
+          throw new Error('Rate limited');
         }
 
-        if (!response.ok) throw new Error(`Groq error ${response.status}`);
+        if (!response.ok) throw new Error(`API error ${response.status}`);
 
         const json = await response.json();
         let text = json.choices?.[0]?.message?.content || '';
         if (!text) throw new Error('Empty response');
 
-        text = text.replace(/<think>[\s\S]*?<\/think>/i, '').trim();
-        let clean = text.replace(/^```json\s*/i, '').replace(/^```\s*/, '').replace(/```\s*$/, '').trim();
+        text = text.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+        text = text.replace(/```json/gi, '').replace(/```/g, '').trim();
         
-        const jsonMatch = clean.match(/\{[\s\S]*\}/);
-        if (jsonMatch) clean = jsonMatch[0];
-        if (!clean.startsWith('{')) throw new Error('No JSON found');
-
-        return { statusCode: 200, body: JSON.stringify(JSON.parse(clean)) };
+        try {
+          return { statusCode: 200, body: JSON.stringify(JSON.parse(text)) };
+        } catch (e) {
+          const match = text.match(/\{[\s\S]*\}/);
+          if (match) {
+            return { statusCode: 200, body: JSON.stringify(JSON.parse(match[0])) };
+          }
+          throw new Error('No JSON found');
+        }
       } catch (error) {
-        if (attempt < 2) { await new Promise(r => setTimeout(r, 8000)); continue; }
+        if (attempt < 2) { 
+          await new Promise(r => setTimeout(r, error.message.includes('Rate') ? 8000 : 2000)); 
+          continue; 
+        }
         throw error;
       }
     }
