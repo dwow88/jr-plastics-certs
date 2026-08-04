@@ -1,177 +1,237 @@
+// JR Plastics Certificate Processor - Anthropic Backend
+// Updated: Anthropic Claude API Integration
+
 exports.handler = async (event) => {
-  console.log('Extract function called');
+  console.log('Extract handler invoked');
   
   if (event.httpMethod !== 'POST') {
-    return { statusCode: 405, body: JSON.stringify({ error: 'Method not allowed' }) };
+    return {
+      statusCode: 405,
+      body: JSON.stringify({ error: 'Method not allowed' })
+    };
   }
 
   try {
-    const body = JSON.parse(event.body);
-    const imageBase64 = body.imageBase64;
-    
-    if (!imageBase64) {
-      console.error('No image data provided');
-      return { statusCode: 400, body: JSON.stringify({ error: 'No image data provided' }) };
+    // Parse request body
+    let imageBase64;
+    try {
+      const parsed = JSON.parse(event.body);
+      imageBase64 = parsed.imageBase64;
+    } catch (e) {
+      return {
+        statusCode: 400,
+        body: JSON.stringify({ error: 'Invalid request body' })
+      };
     }
 
+    if (!imageBase64) {
+      return {
+        statusCode: 400,
+        body: JSON.stringify({ error: 'No image data provided' })
+      };
+    }
+
+    // Get API key from environment
     const apiKey = process.env.ANTHROPIC_API_KEY;
-    console.log('API Key check:', apiKey ? 'Present' : 'MISSING');
     
     if (!apiKey) {
-      console.error('ANTHROPIC_API_KEY environment variable not set');
-      return { statusCode: 500, body: JSON.stringify({ error: 'ANTHROPIC_API_KEY not configured on server' }) };
+      console.error('ANTHROPIC_API_KEY not found in environment');
+      return {
+        statusCode: 500,
+        body: JSON.stringify({ 
+          error: 'ANTHROPIC_API_KEY not configured on server. Please set the environment variable in Netlify.' 
+        })
+      };
     }
 
-    const prompt = `You are extracting data from a JR Plastics supplier certification form.
+    console.log('API key found, proceeding with extraction');
 
-CRITICAL INSTRUCTIONS FOR GAUGES:
-- Top row contains 9 hand-written gauges labeled t1 through t9 (read LEFT TO RIGHT)
-- Bottom row contains 10 hand-written gauges labeled t10 through t19 (read LEFT TO RIGHT)
-- Each gauge is a decimal measurement (e.g., 0.125, 0.250, 1.500)
-- Read numbers carefully, even if slightly unclear or smudged
-- If a gauge is unreadable, leave the value as empty string ""
-- Do NOT guess or estimate values
+    const systemPrompt = `You are an expert at extracting data from JR Plastics supplier certification forms.
+Your task is to carefully read all fields and return ONLY valid JSON with no additional text or markdown.`;
 
-Extract ALL fields from the form:
+    const userPrompt = `Extract all data from this JR Plastics certification form.
+
+CRITICAL - GAUGE EXTRACTION:
+- Top row: 9 hand-written gauges (t1 through t9) - read LEFT TO RIGHT
+- Bottom row: 10 hand-written gauges (t10 through t19) - read LEFT TO RIGHT
+- Each gauge shows a decimal measurement (like 0.125, 0.250, 1.500)
+- Read carefully, even if numbers are slightly unclear
+- If unreadable, leave empty string ""
+
+Extract these fields:
 - po_number: Purchase order number
-- pallet_number: Pallet identification
-- railcar_number: Railcar identification
-- date: Date in YYYY-MM-DD format
+- pallet_number: Pallet ID
+- railcar_number: Railcar ID  
+- date: Date (YYYY-MM-DD format)
 - pieces: Number of pieces
-- packer: Name/ID of packer
-- operator: Name/ID of operator
-- t1-t19: Thickness gauge readings (decimal format)
+- packer: Packer name/ID
+- operator: Operator name/ID
+- t1 through t19: Thickness gauge readings (decimal)
 - length: Length measurement
 - width: Width measurement
-- surface_finish: Surface finish specification
-- qc_date: QC date in YYYY-MM-DD format
+- surface_finish: Surface finish type
+- qc_date: QC date (YYYY-MM-DD)
 - upf_receiver: UPF receiver
-- recv_date: Receive date in YYYY-MM-DD format
-- recv_time: Receive time in HH:MM format
+- recv_date: Receive date (YYYY-MM-DD)
+- recv_time: Receive time (HH:MM)
 
-Return ONLY a valid JSON object with these exact keys, using empty strings for any missing values:
-{"po_number":"","pallet_number":"","railcar_number":"","date":"","pieces":"","packer":"","operator":"","t1":"","t2":"","t3":"","t4":"","t5":"","t6":"","t7":"","t8":"","t9":"","t10":"","t11":"","t12":"","t13":"","t14":"","t15":"","t16":"","t17":"","t18":"","t19":"","length":"","width":"","surface_finish":"","qc_date":"","upf_receiver":"","recv_date":"","recv_time":""}
+Return ONLY this JSON structure, with empty strings for missing values:
+{
+  "po_number": "",
+  "pallet_number": "",
+  "railcar_number": "",
+  "date": "",
+  "pieces": "",
+  "packer": "",
+  "operator": "",
+  "t1": "",
+  "t2": "",
+  "t3": "",
+  "t4": "",
+  "t5": "",
+  "t6": "",
+  "t7": "",
+  "t8": "",
+  "t9": "",
+  "t10": "",
+  "t11": "",
+  "t12": "",
+  "t13": "",
+  "t14": "",
+  "t15": "",
+  "t16": "",
+  "t17": "",
+  "t18": "",
+  "t19": "",
+  "length": "",
+  "width": "",
+  "surface_finish": "",
+  "qc_date": "",
+  "upf_receiver": "",
+  "recv_date": "",
+  "recv_time": ""
+}
 
-Do not include any markdown, explanations, or additional text. Return ONLY the JSON object.`;
+Do not include any markdown formatting, explanations, or additional text. Return ONLY the JSON object.`;
 
-    const payload = {
+    const requestBody = {
       model: 'claude-3-5-sonnet-20241022',
       max_tokens: 1024,
-      messages: [{
-        role: 'user',
-        content: [
-          {
-            type: 'image',
-            source: {
-              type: 'base64',
-              media_type: 'image/jpeg',
-              data: imageBase64
+      system: systemPrompt,
+      messages: [
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'image',
+              source: {
+                type: 'base64',
+                media_type: 'image/jpeg',
+                data: imageBase64
+              }
+            },
+            {
+              type: 'text',
+              text: userPrompt
             }
-          },
-          {
-            type: 'text',
-            text: prompt
-          }
-        ]
-      }]
+          ]
+        }
+      ]
     };
 
-    for (let attempt = 0; attempt < 3; attempt++) {
-      try {
-        console.log(`Attempt ${attempt + 1}`);
-        
-        const response = await fetch('https://api.anthropic.com/v1/messages', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-api-key': apiKey,
-            'anthropic-version': '2023-06-01'
-          },
-          body: JSON.stringify(payload),
-          timeout: 30000
-        });
+    console.log('Sending request to Anthropic API');
 
-        console.log(`Status: ${response.status}`);
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01'
+      },
+      body: JSON.stringify(requestBody)
+    });
 
-        if (response.status === 429) {
-          if (attempt < 2) {
-            console.log('Rate limited, retrying...');
-            await new Promise(r => setTimeout(r, 5000));
-            continue;
-          }
-          throw new Error('Rate limited after retries');
-        }
+    console.log(`Anthropic API response status: ${response.status}`);
 
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error(`API error: ${response.status} - ${errorText.slice(0, 200)}`);
-          throw new Error(`Anthropic API error ${response.status}`);
-        }
-
-        const json = await response.json();
-        console.log('Got response from Anthropic');
-        
-        let text = json.content?.[0]?.text || '';
-
-        if (!text) {
-          console.error('Empty response text');
-          throw new Error('Empty response from model');
-        }
-
-        console.log('Response length:', text.length);
-
-        // Clean up response - remove markdown if present
-        text = text.replace(/```json/gi, '').replace(/```/g, '').trim();
-
-        try {
-          const result = JSON.parse(text);
-          console.log('Successfully parsed JSON directly');
-          return {
-            statusCode: 200,
-            body: JSON.stringify(result)
-          };
-        } catch (e) {
-          console.log('Direct parse failed, attempting extraction');
-          
-          // Try to extract JSON object
-          const match = text.match(/\{[\s\S]*\}/);
-          if (match) {
-            try {
-              const result = JSON.parse(match[0]);
-              console.log('Successfully parsed extracted JSON');
-              return {
-                statusCode: 200,
-                body: JSON.stringify(result)
-              };
-            } catch (parseError) {
-              console.error('Failed to parse extracted JSON:', parseError.message);
-              throw new Error('Could not parse JSON response');
-            }
-          }
-          
-          console.error('No JSON object found in response');
-          throw new Error('No valid JSON in response');
-        }
-
-      } catch (error) {
-        console.error(`Attempt ${attempt + 1} failed:`, error.message);
-        
-        if (attempt < 2) {
-          await new Promise(r => setTimeout(r, 3000));
-        }
-      }
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`API error: ${response.status} - ${errorText}`);
+      return {
+        statusCode: response.status,
+        body: JSON.stringify({ 
+          error: `Anthropic API error: ${response.status}` 
+        })
+      };
     }
 
-    return {
-      statusCode: 500,
-      body: JSON.stringify({ error: 'Failed to extract data after retries' })
-    };
+    const responseData = await response.json();
+    console.log('Got response from Anthropic');
+
+    // Extract text from response
+    let extractedText = '';
+    if (responseData.content && responseData.content.length > 0) {
+      extractedText = responseData.content[0].text || '';
+    }
+
+    if (!extractedText) {
+      console.error('Empty response from Anthropic');
+      return {
+        statusCode: 500,
+        body: JSON.stringify({ error: 'Empty response from Claude' })
+      };
+    }
+
+    console.log('Response text length:', extractedText.length);
+
+    // Clean up response
+    let cleanText = extractedText.trim();
+    cleanText = cleanText.replace(/^```json\s*/i, '').replace(/^```\s*/i, '');
+    cleanText = cleanText.replace(/```\s*$/i, '').trim();
+
+    // Try to parse JSON
+    let jsonResult;
+    try {
+      jsonResult = JSON.parse(cleanText);
+      console.log('Successfully parsed JSON');
+      return {
+        statusCode: 200,
+        body: JSON.stringify(jsonResult)
+      };
+    } catch (parseError) {
+      console.log('Direct parse failed, trying to extract JSON object');
+      
+      // Try to find JSON object in response
+      const jsonMatch = cleanText.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        try {
+          jsonResult = JSON.parse(jsonMatch[0]);
+          console.log('Successfully parsed extracted JSON');
+          return {
+            statusCode: 200,
+            body: JSON.stringify(jsonResult)
+          };
+        } catch (innerError) {
+          console.error('Failed to parse extracted JSON:', innerError.message);
+        }
+      }
+      
+      console.error('Could not extract valid JSON from response');
+      return {
+        statusCode: 500,
+        body: JSON.stringify({ 
+          error: 'Could not parse response as JSON',
+          responsePreview: cleanText.slice(0, 200)
+        })
+      };
+    }
 
   } catch (error) {
     console.error('Function error:', error.message);
     return {
       statusCode: 500,
-      body: JSON.stringify({ error: error.message || 'Unknown error' })
+      body: JSON.stringify({ 
+        error: error.message || 'Unknown error in extraction function'
+      })
     };
   }
 };
