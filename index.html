@@ -8,19 +8,19 @@
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f0e8; color: #2c2c2c; }
     
-    .header { background: #1a1410; color: #e8d5b0; padding: 25px 40px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-    .header h1 { font-size: 32px; font-weight: 700; letter-spacing: -0.5px; }
-    .header p { font-size: 13px; color: #a0a0a0; margin-top: 8px; font-weight: 400; }
+    .header { background: #1a1410; color: #e8d5b0; padding: 25px 40px; }
+    .header h1 { font-size: 32px; font-weight: 700; }
+    .header p { font-size: 13px; color: #a0a0a0; margin-top: 8px; }
     
     .container { display: flex; max-width: 1500px; margin: 0 auto; padding: 30px 20px; gap: 30px; }
     .sidebar { flex: 0 0 420px; }
-    .main { flex: 1; min-width: 0; }
+    .main { flex: 1; }
     
-    .card { background: white; border-radius: 6px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.08); margin-bottom: 20px; }
-    .card-header { background: #1a1410; color: #e8d5b0; padding: 16px 20px; font-weight: 600; font-size: 13px; letter-spacing: 0.5px; }
+    .card { background: white; border-radius: 6px; overflow: hidden; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+    .card-header { background: #1a1410; color: #e8d5b0; padding: 16px 20px; font-weight: 600; font-size: 13px; }
     .card-body { padding: 20px; }
     
-    label { display: block; font-size: 12px; font-weight: 600; color: #555; margin: 15px 0 8px 0; letter-spacing: 0.3px; }
+    label { display: block; font-size: 12px; font-weight: 600; color: #555; margin: 15px 0 8px 0; }
     label:first-of-type { margin-top: 0; }
     
     input[type="text"], input[type="password"] { 
@@ -31,13 +31,11 @@
       font-size: 14px; 
       font-family: 'Courier New', monospace;
       background: #fafafa;
-      transition: all 0.2s;
     }
     input[type="text"]:focus, input[type="password"]:focus { 
       outline: none; 
       border-color: #2a6a3e; 
       background: white;
-      box-shadow: 0 0 0 3px rgba(42, 106, 62, 0.1);
     }
     
     button { 
@@ -50,55 +48,34 @@
       font-size: 14px; 
       font-weight: 600;
       margin-top: 12px;
-      transition: background 0.2s, box-shadow 0.2s;
-      box-shadow: 0 1px 2px rgba(0,0,0,0.1);
     }
-    button:hover:not(:disabled) { 
-      background: #40c070;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.15);
-    }
-    button:active:not(:disabled) { transform: scale(0.98); }
-    button:disabled { 
-      background: #ccc; 
-      cursor: not-allowed;
-      box-shadow: none;
-    }
+    button:hover:not(:disabled) { background: #40c070; }
+    button:disabled { background: #ccc; cursor: not-allowed; }
     
     .button-group { display: flex; gap: 10px; margin-top: 15px; }
     .button-group button { flex: 1; margin-top: 0; }
     
     .progress-container { margin-top: 15px; display: none; }
     .progress-bar { width: 100%; height: 6px; background: #e0e0e0; border-radius: 3px; overflow: hidden; }
-    .progress-fill { height: 100%; background: #2a6a3e; width: 0%; transition: width 0.3s ease; }
-    .progress-text { font-size: 12px; color: #666; margin-top: 10px; font-weight: 500; }
+    .progress-fill { height: 100%; background: #2a6a3e; width: 0%; transition: width 0.3s; }
+    .progress-text { font-size: 12px; color: #666; margin-top: 10px; }
     
     .results-container { background: white; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); padding: 0; display: flex; flex-direction: column; height: 500px; }
     .results-header { background: #1a1410; color: #e8d5b0; padding: 16px 20px; font-weight: 600; font-size: 13px; }
     .results { flex: 1; overflow-y: auto; padding: 20px; font-family: 'Courier New', monospace; font-size: 12px; line-height: 1.5; }
     
     .results .page { margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid #e0e0e0; }
-    .results .page:last-child { border-bottom: none; margin-bottom: 0; }
+    .results .page:last-child { border-bottom: none; }
     .results .page-title { font-weight: bold; color: #1a1410; margin-bottom: 8px; }
     .results .error { color: #c0392b; font-weight: 600; }
-    .results .field { margin: 4px 0; display: flex; }
-    .results .key { color: #2a6a3e; font-weight: 600; margin-right: 8px; min-width: 140px; }
-    .results .value { color: #333; word-break: break-all; }
+    .results .field { margin: 4px 0; }
+    .results .key { color: #2a6a3e; font-weight: 600; margin-right: 8px; }
     
-    .status-bar { background: #2c2c2c; color: #e0e0e0; padding: 12px 40px; font-size: 12px; font-weight: 500; }
+    .status-bar { background: #2c2c2c; color: #e0e0e0; padding: 12px 40px; font-size: 12px; }
     
-    .info-text { font-size: 12px; color: #666; margin-bottom: 12px; line-height: 1.4; }
+    .info-text { font-size: 12px; color: #666; margin-bottom: 12px; }
     .link { color: #2a6a3e; text-decoration: none; font-weight: 600; }
     .link:hover { text-decoration: underline; }
-    
-    .warning { background: #fffbea; border: 1px solid #f0e0a0; border-radius: 4px; padding: 10px; margin-bottom: 12px; font-size: 12px; color: #8b7c3a; }
-    
-    .hidden { display: none !important; }
-    
-    @media (max-width: 1024px) {
-      .container { flex-direction: column; }
-      .sidebar { flex: none; width: 100%; }
-      .main { flex: none; width: 100%; }
-    }
   </style>
 </head>
 <body>
@@ -111,41 +88,31 @@
 <div class="container">
   <div class="sidebar">
     
-    <!-- Groq API Key -->
     <div class="card">
       <div class="card-header">Groq API Key</div>
       <div class="card-body">
-        <p class="info-text">Get your free Groq API key at:<br><a href="https://console.groq.com/keys" target="_blank" class="link">console.groq.com/keys</a></p>
-        <div class="warning">
-          Note: Free tier has rate limits (~30 requests/minute). For unlimited processing, upgrade to paid tier.
-        </div>
+        <p class="info-text">Get key: <a href="https://console.groq.com/keys" target="_blank" class="link">console.groq.com/keys</a></p>
         <label>API Key:</label>
         <input type="password" id="api-key-input" placeholder="gsk_..." autocomplete="off">
-        <button onclick="saveApiKey()" style="width: 100%; margin-top: 10px;">Save API Key</button>
+        <button onclick="saveApiKey()" style="width: 100%;">Save API Key</button>
       </div>
     </div>
     
-    <!-- File Selection -->
     <div class="card">
       <div class="card-header">Select PDF File</div>
       <div class="card-body">
         <button onclick="chooseFile()" style="width: 100%;">Choose PDF File</button>
-        <p class="info-text" style="margin-top: 12px;">
-          <span id="file-name">No file selected</span>
-        </p>
+        <p class="info-text" style="margin-top: 12px;"><span id="file-name">No file selected</span></p>
       </div>
     </div>
     
-    <!-- Processing -->
     <div class="card">
       <div class="card-header">Process</div>
       <div class="card-body">
         <button id="process-btn" onclick="processAll()" style="width: 100%;">Process All Pages</button>
         
         <div class="progress-container" id="progress-container">
-          <div class="progress-bar">
-            <div class="progress-fill" id="progress-fill"></div>
-          </div>
+          <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
           <p class="progress-text" id="progress-text">Ready</p>
         </div>
         
@@ -161,24 +128,16 @@
   <div class="main">
     <div class="results-container">
       <div class="results-header">Results Preview</div>
-      <div class="results" id="results">No results yet. Select a PDF and process to see results.</div>
+      <div class="results" id="results">No results yet.</div>
     </div>
   </div>
 </div>
 
-<div class="status-bar">
-  <span id="status">Ready to process certificates</span>
-</div>
+<div class="status-bar"><span id="status">Ready</span></div>
 
 <script>
-const config = {
-  apiKey: '',
-  pdfFile: null,
-  results: [],
-  isProcessing: false
-};
+const config = { apiKey: '', pdfFile: null, results: [], isProcessing: false };
 
-// Load saved API key on page load
 window.addEventListener('load', () => {
   const saved = localStorage.getItem('groq_api_key');
   if (saved) {
@@ -189,18 +148,11 @@ window.addEventListener('load', () => {
 
 function saveApiKey() {
   const key = document.getElementById('api-key-input').value.trim();
-  if (!key) {
-    alert('Please enter your Groq API key');
-    return;
-  }
-  if (!key.startsWith('gsk_')) {
-    alert('API key should start with gsk_');
-    return;
-  }
+  if (!key) { alert('Enter API key'); return; }
   config.apiKey = key;
   localStorage.setItem('groq_api_key', key);
-  alert('API key saved securely!');
-  updateStatus('API key saved');
+  alert('Saved!');
+  document.getElementById('status').textContent = 'API key saved';
 }
 
 function chooseFile() {
@@ -211,85 +163,58 @@ function chooseFile() {
     config.pdfFile = e.target.files[0];
     if (config.pdfFile) {
       document.getElementById('file-name').textContent = config.pdfFile.name;
-      updateStatus(`Loaded: ${config.pdfFile.name}`);
+      document.getElementById('status').textContent = `Loaded: ${config.pdfFile.name}`;
     }
   };
   input.click();
 }
 
 async function pdfToImages(file) {
-  // Load PDF.js library
   if (!window.pdfjsLib) {
     const script = document.createElement('script');
     script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
-    await new Promise(resolve => {
-      script.onload = resolve;
-      document.head.appendChild(script);
-    });
+    await new Promise(resolve => { script.onload = resolve; document.head.appendChild(script); });
     window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
   }
 
   const arrayBuffer = await file.arrayBuffer();
   const pdf = await window.pdfjsLib.getDocument(arrayBuffer).promise;
-  
   const images = [];
+  
   for (let i = 1; i <= pdf.numPages; i++) {
     const page = await pdf.getPage(i);
     const viewport = page.getViewport({ scale: 2 });
     const canvas = document.createElement('canvas');
     canvas.width = viewport.width;
     canvas.height = viewport.height;
-    
-    await page.render({
-      canvasContext: canvas.getContext('2d'),
-      viewport: viewport
-    }).promise;
-    
+    await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
     const imageData = canvas.toDataURL('image/jpeg').replace('data:image/jpeg;base64,', '');
     images.push(imageData);
   }
-  
   return images;
 }
 
 async function extractData(imageBase64) {
-  if (!config.apiKey) {
-    throw new Error('No Groq API key configured');
+  if (!config.apiKey) throw new Error('No API key');
+  
+  const response = await fetch('/.netlify/functions/extract', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ imageBase64 })
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || `Error ${response.status}`);
   }
 
-  try {
-    const response = await fetch('/.netlify/functions/extract', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ imageBase64 })
-    });
-
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || `Server error ${response.status}`);
-    }
-
-    const data = await response.json();
-    return data;
-  } catch (error) {
-    console.error('Extraction error:', error);
-    throw error;
-  }
+  return await response.json();
 }
 
 async function processAll() {
-  if (!config.pdfFile) {
-    alert('Please select a PDF file first');
-    return;
-  }
-  if (!config.apiKey) {
-    alert('Please save your Groq API key first');
-    return;
-  }
-  if (config.isProcessing) {
-    alert('Already processing');
-    return;
-  }
+  if (!config.pdfFile) { alert('Select PDF'); return; }
+  if (!config.apiKey) { alert('Save API key'); return; }
+  if (config.isProcessing) { alert('Already processing'); return; }
 
   config.isProcessing = true;
   document.getElementById('process-btn').disabled = true;
@@ -297,15 +222,15 @@ async function processAll() {
   config.results = [];
 
   try {
-    updateStatus('Converting PDF to images...');
+    document.getElementById('status').textContent = 'Converting...';
     const images = await pdfToImages(config.pdfFile);
     
     document.getElementById('progress-fill').style.width = '0%';
-    const resultsDiv = document.getElementById('results');
-    resultsDiv.innerHTML = '';
+    document.getElementById('results').innerHTML = '';
 
     for (let i = 0; i < images.length; i++) {
-      updateProgress(i, images.length, `Processing page ${i + 1} of ${images.length}...`);
+      document.getElementById('progress-text').textContent = `Page ${i + 1} of ${images.length}`;
+      document.getElementById('progress-fill').style.width = ((i / images.length) * 100) + '%';
       
       try {
         const extracted = await extractData(images[i]);
@@ -315,39 +240,25 @@ async function processAll() {
         config.results.push({ page: i + 1, error: e.message });
       }
 
-      // Longer delay between requests to avoid rate limiting
-      if (i < images.length - 1) {
-        await new Promise(r => setTimeout(r, 3000));
-      }
+      if (i < images.length - 1) await new Promise(r => setTimeout(r, 2000));
     }
 
-    updateProgress(images.length, images.length, 'Processing complete!');
+    document.getElementById('progress-fill').style.width = '100%';
     displayResults();
-    alert(`Successfully processed ${images.length} page(s)`);
-    updateStatus(`Processed ${images.length} pages`);
+    alert(`Processed ${images.length} pages`);
+    document.getElementById('status').textContent = `Done: ${images.length} pages`;
   } catch (e) {
     alert(`Error: ${e.message}`);
-    updateStatus(`Error: ${e.message}`);
+    document.getElementById('status').textContent = `Error: ${e.message}`;
   } finally {
     config.isProcessing = false;
     document.getElementById('process-btn').disabled = false;
   }
 }
 
-function updateProgress(current, total, text) {
-  const percent = (current / total) * 100;
-  document.getElementById('progress-fill').style.width = percent + '%';
-  document.getElementById('progress-text').textContent = text;
-}
-
 function displayResults() {
   const resultsDiv = document.getElementById('results');
   resultsDiv.innerHTML = '';
-
-  if (config.results.length === 0) {
-    resultsDiv.innerHTML = '<p style="color: #999;">No results to display</p>';
-    return;
-  }
 
   config.results.forEach(result => {
     const pageDiv = document.createElement('div');
@@ -358,10 +269,8 @@ function displayResults() {
     if (result.error) {
       html += `<div class="error">ERROR: ${result.error}</div>`;
     } else {
-      const keys = Object.keys(result).filter(k => k !== 'page').sort();
-      keys.forEach(key => {
-        const value = result[key] || '';
-        html += `<div class="field"><span class="key">${key}:</span> <span class="value">${escapeHtml(value)}</span></div>`;
+      Object.keys(result).filter(k => k !== 'page').sort().forEach(key => {
+        html += `<div class="field"><span class="key">${key}:</span> ${result[key] || ''}</div>`;
       });
     }
     
@@ -370,59 +279,35 @@ function displayResults() {
   });
 }
 
-function escapeHtml(text) {
-  const div = document.createElement('div');
-  div.textContent = text;
-  return div.innerHTML;
-}
-
 function exportCSV() {
-  if (!config.results.length) {
-    alert('No results to export');
-    return;
-  }
-
+  if (!config.results.length) { alert('No results'); return; }
+  
   const allKeys = new Set();
-  config.results.forEach(r => {
-    Object.keys(r).forEach(k => {
-      if (k !== 'page' && k !== 'error') allKeys.add(k);
-    });
-  });
+  config.results.forEach(r => Object.keys(r).forEach(k => { if (k !== 'page') allKeys.add(k); }));
   const keys = ['page', ...Array.from(allKeys).sort()];
 
   let csv = keys.join(',') + '\n';
   config.results.forEach(result => {
-    const row = keys.map(k => {
-      const v = result[k] || '';
-      return `"${String(v).replace(/"/g, '""')}"`;
-    });
-    csv += row.join(',') + '\n';
+    csv += keys.map(k => `"${String(result[k] || '').replace(/"/g, '""')}"` ).join(',') + '\n';
   });
 
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const blob = new Blob([csv], { type: 'text/csv' });
   const link = document.createElement('a');
   link.href = URL.createObjectURL(blob);
-  link.download = `jr-plastics-results-${new Date().toISOString().split('T')[0]}.csv`;
+  link.download = 'results.csv';
   link.click();
-  updateStatus('Exported to CSV');
+  document.getElementById('status').textContent = 'Exported CSV';
 }
 
 function exportJSON() {
-  if (!config.results.length) {
-    alert('No results to export');
-    return;
-  }
-
+  if (!config.results.length) { alert('No results'); return; }
+  
   const blob = new Blob([JSON.stringify(config.results, null, 2)], { type: 'application/json' });
   const link = document.createElement('a');
   link.href = URL.createObjectURL(blob);
-  link.download = `jr-plastics-results-${new Date().toISOString().split('T')[0]}.json`;
+  link.download = 'results.json';
   link.click();
-  updateStatus('Exported to JSON');
-}
-
-function updateStatus(text) {
-  document.getElementById('status').textContent = text;
+  document.getElementById('status').textContent = 'Exported JSON';
 }
 </script>
 
