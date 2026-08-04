@@ -285,7 +285,7 @@ Return ONLY valid JSON with ALL fields:
             }]
         }
         
-        for attempt in range(5):  # More retries for rate limiting
+        for attempt in range(5):
             try:
                 response = requests.post(
                     'https://api.groq.com/openai/v1/chat/completions',
@@ -296,7 +296,7 @@ Return ONLY valid JSON with ALL fields:
                 
                 if response.status_code == 429:
                     if attempt < 4:
-                        wait_time = 15 + (attempt * 5)  # Exponential backoff: 15, 20, 25, 30 seconds
+                        wait_time = 15 + (attempt * 5)
                         time.sleep(wait_time)
                         continue
                     raise Exception("Rate limit exceeded after retries - upgrade Groq account")
@@ -365,7 +365,7 @@ Return ONLY valid JSON with ALL fields:
             self.progress_bar.config(maximum=len(images))
             
             if len(images) > 1:
-                self.status_var.set(f"Processing {len(images)} pages (this may take a few minutes due to Groq rate limits)...")
+                self.status_var.set(f"Processing {len(images)} pages (this may take a few minutes)...")
             
             for i, img_b64 in enumerate(images):
                 if not self.is_processing:
@@ -386,7 +386,7 @@ Return ONLY valid JSON with ALL fields:
                     })
                 
                 if i < len(images) - 1:
-                    time.sleep(10)  # 10 second delay between pages to avoid rate limiting
+                    time.sleep(10)
             
             self.progress_bar.config(value=len(images))
             self.progress_var.set(f"Complete! Processed {len(self.results)} pages")
@@ -435,7 +435,6 @@ Return ONLY valid JSON with ALL fields:
         # Show gauge verification dialog if we have gauges
         if has_gauges and len(self.results) > 0:
             self.root.after(500, self.show_gauge_verification)
-    
     
     def show_gauge_verification(self):
         """Show dialog to verify and edit gauge readings"""
@@ -529,6 +528,8 @@ Return ONLY valid JSON with ALL fields:
                               bg="#f0f0f0", fg=self.text_dark, relief=tk.FLAT, bd=0,
                               padx=20, pady=8, cursor="hand2")
         cancel_btn.pack(side=tk.LEFT)
+    
+    def export_csv(self):
         """Export to CSV"""
         if not self.results:
             messagebox.showerror("Error", "No results to export")
