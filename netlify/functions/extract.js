@@ -1,8 +1,8 @@
-// JR Plastics Certificate Processor - Anthropic Backend
-// Updated: Anthropic Claude API Integration
+// JR Plastics Certificate Processor - Groq Backend
+// Updated: Groq Qwen Vision Integration
 
 exports.handler = async (event) => {
-  console.log('Extract handler invoked');
+  console.log('Extract handler invoked for Groq');
   
   if (event.httpMethod !== 'POST') {
     return {
@@ -32,126 +32,82 @@ exports.handler = async (event) => {
     }
 
     // Get API key from environment
-    const apiKey = process.env.ANTHROPIC_API_KEY;
+    const apiKey = process.env.GROQ_API_KEY;
     
     if (!apiKey) {
-      console.error('ANTHROPIC_API_KEY not found in environment');
+      console.error('GROQ_API_KEY not found in environment');
       return {
         statusCode: 500,
         body: JSON.stringify({ 
-          error: 'ANTHROPIC_API_KEY not configured on server. Please set the environment variable in Netlify.' 
+          error: 'GROQ_API_KEY not configured on server. Please set the environment variable in Netlify.' 
         })
       };
     }
 
-    console.log('API key found, proceeding with extraction');
+    console.log('Groq API key found, proceeding with extraction');
 
-    const systemPrompt = `You are an expert at extracting data from JR Plastics supplier certification forms.
-Your task is to carefully read all fields and return ONLY valid JSON with no additional text or markdown.`;
-
-    const userPrompt = `Extract all data from this JR Plastics certification form.
+    const prompt = `Extract data from this JR Plastics certification form. Return ONLY valid JSON with no markdown or explanation.
 
 CRITICAL - GAUGE EXTRACTION:
-- Top row: 9 hand-written gauges (t1 through t9) - read LEFT TO RIGHT
-- Bottom row: 10 hand-written gauges (t10 through t19) - read LEFT TO RIGHT
-- Each gauge shows a decimal measurement (like 0.125, 0.250, 1.500)
-- Read carefully, even if numbers are slightly unclear
-- If unreadable, leave empty string ""
+- Top row: 9 hand-written gauges (t1-t9), read LEFT TO RIGHT
+- Bottom row: 10 hand-written gauges (t10-t19), read LEFT TO RIGHT
+- Each gauge shows decimal measurements (0.125, 0.250, 1.500, etc)
+- Read carefully, even if slightly unclear
+- If unreadable, use empty string ""
 
 Extract these fields:
-- po_number: Purchase order number
-- pallet_number: Pallet ID
-- railcar_number: Railcar ID  
-- date: Date (YYYY-MM-DD format)
-- pieces: Number of pieces
-- packer: Packer name/ID
-- operator: Operator name/ID
-- t1 through t19: Thickness gauge readings (decimal)
-- length: Length measurement
-- width: Width measurement
-- surface_finish: Surface finish type
-- qc_date: QC date (YYYY-MM-DD)
-- upf_receiver: UPF receiver
-- recv_date: Receive date (YYYY-MM-DD)
-- recv_time: Receive time (HH:MM)
+po_number, pallet_number, railcar_number, date (YYYY-MM-DD), pieces, packer, operator,
+t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13, t14, t15, t16, t17, t18, t19,
+length, width, surface_finish, qc_date (YYYY-MM-DD), upf_receiver, recv_date (YYYY-MM-DD), recv_time (HH:MM)
 
-Return ONLY this JSON structure, with empty strings for missing values:
-{
-  "po_number": "",
-  "pallet_number": "",
-  "railcar_number": "",
-  "date": "",
-  "pieces": "",
-  "packer": "",
-  "operator": "",
-  "t1": "",
-  "t2": "",
-  "t3": "",
-  "t4": "",
-  "t5": "",
-  "t6": "",
-  "t7": "",
-  "t8": "",
-  "t9": "",
-  "t10": "",
-  "t11": "",
-  "t12": "",
-  "t13": "",
-  "t14": "",
-  "t15": "",
-  "t16": "",
-  "t17": "",
-  "t18": "",
-  "t19": "",
-  "length": "",
-  "width": "",
-  "surface_finish": "",
-  "qc_date": "",
-  "upf_receiver": "",
-  "recv_date": "",
-  "recv_time": ""
-}
-
-Do not include any markdown formatting, explanations, or additional text. Return ONLY the JSON object.`;
+Return ONLY this JSON structure:
+{"po_number":"","pallet_number":"","railcar_number":"","date":"","pieces":"","packer":"","operator":"","t1":"","t2":"","t3":"","t4":"","t5":"","t6":"","t7":"","t8":"","t9":"","t10":"","t11":"","t12":"","t13":"","t14":"","t15":"","t16":"","t17":"","t18":"","t19":"","length":"","width":"","surface_finish":"","qc_date":"","upf_receiver":"","recv_date":"","recv_time":""}`;
 
     const requestBody = {
-      model: 'claude-3-5-sonnet-20241022',
-      max_tokens: 1024,
-      system: systemPrompt,
+      model: 'qwen/qwen3.6-27b',
+      max_tokens: 2000,
       messages: [
         {
           role: 'user',
           content: [
             {
-              type: 'image',
-              source: {
-                type: 'base64',
-                media_type: 'image/jpeg',
-                data: imageBase64
+              type: 'image_url',
+              image_url: {
+                url: `data:image/jpeg;base64,${imageBase64}`
               }
             },
             {
               type: 'text',
-              text: userPrompt
+              text: prompt
             }
           ]
         }
       ]
     };
 
-    console.log('Sending request to Anthropic API');
+    console.log('Sending request to Groq API');
 
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
+    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01'
+        'Authorization': `Bearer ${apiKey}`
       },
-      body: JSON.stringify(requestBody)
+      body: JSON.stringify(requestBody),
+      timeout: 30000
     });
 
-    console.log(`Anthropic API response status: ${response.status}`);
+    console.log(`Groq API response status: ${response.status}`);
+
+    if (response.status === 429) {
+      console.error('Rate limited by Groq');
+      return {
+        statusCode: 429,
+        body: JSON.stringify({ 
+          error: 'Rate limited - please wait and try again. Consider upgrading your Groq plan.' 
+        })
+      };
+    }
 
     if (!response.ok) {
       const errorText = await response.text();
@@ -159,25 +115,25 @@ Do not include any markdown formatting, explanations, or additional text. Return
       return {
         statusCode: response.status,
         body: JSON.stringify({ 
-          error: `Anthropic API error: ${response.status}` 
+          error: `Groq API error: ${response.status}` 
         })
       };
     }
 
     const responseData = await response.json();
-    console.log('Got response from Anthropic');
+    console.log('Got response from Groq');
 
     // Extract text from response
     let extractedText = '';
-    if (responseData.content && responseData.content.length > 0) {
-      extractedText = responseData.content[0].text || '';
+    if (responseData.choices && responseData.choices.length > 0) {
+      extractedText = responseData.choices[0].message?.content || '';
     }
 
     if (!extractedText) {
-      console.error('Empty response from Anthropic');
+      console.error('Empty response from Groq');
       return {
         statusCode: 500,
-        body: JSON.stringify({ error: 'Empty response from Claude' })
+        body: JSON.stringify({ error: 'Empty response from Groq' })
       };
     }
 
@@ -185,6 +141,7 @@ Do not include any markdown formatting, explanations, or additional text. Return
 
     // Clean up response
     let cleanText = extractedText.trim();
+    cleanText = cleanText.replace(/<think>[\s\S]*?<\/think>/gi, '');
     cleanText = cleanText.replace(/^```json\s*/i, '').replace(/^```\s*/i, '');
     cleanText = cleanText.replace(/```\s*$/i, '').trim();
 
@@ -219,8 +176,7 @@ Do not include any markdown formatting, explanations, or additional text. Return
       return {
         statusCode: 500,
         body: JSON.stringify({ 
-          error: 'Could not parse response as JSON',
-          responsePreview: cleanText.slice(0, 200)
+          error: 'Could not parse response as JSON'
         })
       };
     }
