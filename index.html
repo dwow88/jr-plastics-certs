@@ -1,822 +1,591 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-<title>JR Plastics - Cert Record v5</title>
-<link href="https://fonts.googleapis.com/css2?family=Special+Elite&family=DM+Mono:wght@400;500&family=Barlow+Condensed:wght@400;600;700&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-<style>
-:root{--paper:#f5f0e8;--ink:#1a1410;--ink-light:#4a3f35;--rule:#8a7a6a;--accent:#c0392b;--field-bg:#fffdf8;--field-border:#b0a090;--shadow:rgba(0,0,0,0.18);}
-*{box-sizing:border-box;margin:0;padding:0;}
-body{background:#2c2420;min-height:100vh;font-family:'Barlow Condensed',sans-serif;display:flex;flex-direction:column;align-items:center;padding:0;gap:0;}
+#!/usr/bin/env python3
+"""
+JR Plastics Certificate Processor - Professional Desktop App
+Matches the website UI/UX with modern design
+"""
 
-/* TOPBAR */
-.topbar{width:100%;background:#1a1410;padding:10px 20px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;border-bottom:2px solid #c0392b;}
-.topbar-title{font-family:'Special Elite',serif;color:#e8d5b0;font-size:15px;letter-spacing:2px;}
-.btn-group{display:flex;gap:6px;flex-wrap:wrap;}
-.btn{font-family:'DM Mono',monospace;font-size:11px;font-weight:500;letter-spacing:1px;text-transform:uppercase;padding:7px 14px;border:none;border-radius:2px;cursor:pointer;transition:all .15s;white-space:nowrap;}
-.btn-upload{background:#c0392b;color:#fff;}
-.btn-upload:hover{background:#a93226;}
-.btn-process{background:#1a4a2e;color:#80e8a0;border:1px solid #2a6a3e;}
-.btn-process:hover{background:#225a38;}
-.btn-process:disabled{opacity:.4;cursor:wait;}
-.btn-printall{background:#1a3a6a;color:#a8c8f0;}
-.btn-printall:hover{background:#2a4a7a;}
-.btn-printall:disabled{opacity:.4;cursor:wait;}
-.btn-save{background:#2e6b3e;color:#c8ecd2;}
-.btn-save:hover{background:#3a8050;}
-.cert-count{font-family:'DM Mono',monospace;font-size:10px;color:#8a7a6a;letter-spacing:1px;align-self:center;}
+import tkinter as tk
+from tkinter import ttk, filedialog, messagebox, scrolledtext
+import os
+import json
+import base64
+import time
+import requests
+from pathlib import Path
+import threading
+import fitz  # PyMuPDF for PDF handling
 
-/* TAB BAR */
-.tab-bar-wrap{width:100%;background:#221c18;border-bottom:1px solid #3a2e28;overflow-x:auto;flex-shrink:0;}
-.tab-bar{display:flex;align-items:stretch;min-width:max-content;padding:0 12px;}
-.tab{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.5px;padding:10px 16px 8px;cursor:pointer;color:#6a5a4a;border-bottom:2px solid transparent;transition:all .15s;display:flex;align-items:center;gap:7px;white-space:nowrap;position:relative;user-select:none;}
-.tab:hover{color:#c8b89a;background:rgba(255,255,255,.03);}
-.tab.active{color:#e8d5b0;border-bottom-color:#c0392b;background:rgba(255,255,255,.04);}
-.tab-status{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
-.tab-status.pending{background:#4a3a2a;}
-.tab-status.processing{background:#d4a030;animation:pulse 1s infinite;}
-.tab-status.done{background:#2e6b3e;}
-.tab-status.edited{background:#1a5a9a;}
-.tab-remove{font-size:11px;color:#4a3a2a;cursor:pointer;padding:0 2px;margin-left:2px;line-height:1;}
-.tab-remove:hover{color:#c0392b;}
-.tab-add{font-family:'DM Mono',monospace;font-size:14px;color:#4a3a2a;cursor:pointer;padding:8px 14px;align-self:center;transition:color .15s;}
-.tab-add:hover{color:#e8d5b0;}
-.tab-empty{font-family:'DM Mono',monospace;font-size:10px;color:#4a3a2a;padding:10px 16px;align-self:center;letter-spacing:1px;}
+class JRPlasticsProApp:
+    def __init__(self, root):
+        self.root = root
+        self.root.title("JR Plastics Certificate Processor")
+        self.root.geometry("1100x800")
+        self.root.minsize(1000, 700)
+        
+        # Color scheme matching website
+        self.bg_main = "#f5f0e8"
+        self.bg_header = "#1a1410"
+        self.text_light = "#e8d5b0"
+        self.accent_green = "#2a6a3e"
+        self.accent_light_green = "#40c070"
+        self.error_red = "#c0392b"
+        self.text_dark = "#2c2c2c"
+        
+        self.root.configure(bg=self.bg_main)
+        
+        # Data storage
+        self.api_key = ""
+        self.pdf_path = ""
+        self.results = []
+        self.config_file = Path.home() / ".jr_plastics_config.json"
+        self.is_processing = False
+        
+        # Load saved API key
+        self.load_config()
+        
+        # Build beautiful UI
+        self.build_ui()
+    
+    def load_config(self):
+        """Load saved API key"""
+        if self.config_file.exists():
+            try:
+                with open(self.config_file, 'r') as f:
+                    config = json.load(f)
+                    self.api_key = config.get('api_key', '')
+            except:
+                pass
+    
+    def build_ui(self):
+        """Build the professional UI"""
+        # Header with logo area
+        header = tk.Frame(self.root, bg=self.bg_header, height=80)
+        header.pack(fill=tk.X)
+        header.pack_propagate(False)
+        
+        # Title
+        title_frame = tk.Frame(header, bg=self.bg_header)
+        title_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=20, pady=15)
+        
+        title = tk.Label(title_frame, text="JR Plastics", 
+                        font=("Arial", 24, "bold"), fg=self.text_light, bg=self.bg_header)
+        title.pack(anchor=tk.W)
+        
+        subtitle = tk.Label(title_frame, text="Certificate Processor", 
+                           font=("Arial", 10), fg="#a0a0a0", bg=self.bg_header)
+        subtitle.pack(anchor=tk.W)
+        
+        # Main container with padding
+        main_container = tk.Frame(self.root, bg=self.bg_main)
+        main_container.pack(fill=tk.BOTH, expand=True, padx=20, pady=20)
+        
+        # Create two columns
+        left_column = tk.Frame(main_container, bg=self.bg_main)
+        left_column.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(0, 10))
+        
+        right_column = tk.Frame(main_container, bg=self.bg_main)
+        right_column.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True, padx=(10, 0))
+        
+        # --- LEFT COLUMN ---
+        
+        # API Key Section
+        api_frame = self.create_card(left_column, "Groq API Key")
+        
+        info_label = tk.Label(api_frame, text="Get key at: https://console.groq.com/keys",
+                             font=("Arial", 9), fg="#666666", bg="white")
+        info_label.pack(anchor=tk.W, padx=15, pady=(10, 10))
+        
+        key_input_frame = tk.Frame(api_frame, bg="white")
+        key_input_frame.pack(fill=tk.X, padx=15, pady=(0, 15))
+        
+        self.key_entry = tk.Entry(key_input_frame, font=("Arial", 10), show="*",
+                                 bg="#f9f9f9", fg=self.text_dark, relief=tk.FLAT, bd=0)
+        self.key_entry.pack(fill=tk.X, ipady=8)
+        self.key_entry.insert(0, self.api_key)
+        
+        # Separator
+        sep = tk.Frame(key_input_frame, bg="#e0e0e0", height=1)
+        sep.pack(fill=tk.X, pady=5)
+        
+        save_btn = tk.Button(key_input_frame, text="Save API Key", 
+                            command=self.save_api_key, font=("Arial", 9, "bold"),
+                            bg=self.accent_green, fg="white", relief=tk.FLAT, bd=0,
+                            padx=15, pady=8, cursor="hand2", activebackground=self.accent_light_green)
+        save_btn.pack(anchor=tk.W)
+        
+        # File Selection Section
+        file_frame = self.create_card(left_column, "Select PDF File")
+        
+        file_btn = tk.Button(file_frame, text="Choose PDF File",
+                            command=self.choose_file, font=("Arial", 10, "bold"),
+                            bg=self.accent_green, fg="white", relief=tk.FLAT, bd=0,
+                            padx=20, pady=10, cursor="hand2", activebackground=self.accent_light_green)
+        file_btn.pack(pady=10)
+        
+        self.file_label = tk.Label(file_frame, text="No file selected",
+                                  font=("Arial", 9), fg="#888888", bg="white")
+        self.file_label.pack(anchor=tk.W, padx=15, pady=(0, 15))
+        
+        # Processing Section
+        process_frame = self.create_card(left_column, "Process")
+        
+        self.process_btn = tk.Button(process_frame, text="Process All Pages",
+                                     command=self.process_pdf, font=("Arial", 11, "bold"),
+                                     bg=self.accent_green, fg="white", relief=tk.FLAT, bd=0,
+                                     padx=20, pady=12, cursor="hand2", activebackground=self.accent_light_green)
+        self.process_btn.pack(pady=10)
+        
+        # Progress
+        self.progress_var = tk.StringVar(value="Ready to process")
+        self.progress_label = tk.Label(process_frame, textvariable=self.progress_var,
+                                      font=("Arial", 9), fg="#666666", bg="white")
+        self.progress_label.pack(anchor=tk.W, padx=15, pady=(0, 10))
+        
+        self.progress_bar = ttk.Progressbar(process_frame, mode='determinate', length=300)
+        self.progress_bar.pack(fill=tk.X, padx=15, pady=(0, 15))
+        
+        # Export buttons
+        export_frame = tk.Frame(process_frame, bg="white")
+        export_frame.pack(fill=tk.X, padx=15, pady=(0, 15))
+        
+        csv_btn = tk.Button(export_frame, text="Export CSV",
+                           command=self.export_csv, font=("Arial", 9),
+                           bg="#f0f0f0", fg=self.text_dark, relief=tk.FLAT, bd=0,
+                           padx=12, pady=8, cursor="hand2")
+        csv_btn.pack(side=tk.LEFT, padx=(0, 5))
+        
+        json_btn = tk.Button(export_frame, text="Export JSON",
+                            command=self.export_json, font=("Arial", 9),
+                            bg="#f0f0f0", fg=self.text_dark, relief=tk.FLAT, bd=0,
+                            padx=12, pady=8, cursor="hand2")
+        json_btn.pack(side=tk.LEFT)
+        
+        # --- RIGHT COLUMN ---
+        
+        # Results Section
+        results_frame = self.create_card(right_column, "Results Preview", height=400)
+        
+        self.results_text = scrolledtext.ScrolledText(results_frame, height=20, width=50,
+                                                     font=("Courier", 9), bg="#f9f9f9",
+                                                     fg=self.text_dark, relief=tk.FLAT, bd=0)
+        self.results_text.pack(fill=tk.BOTH, expand=True, padx=15, pady=15)
+        self.results_text.config(state=tk.DISABLED)
+        
+        # Status bar
+        status_frame = tk.Frame(self.root, bg="#2c2c2c", height=30)
+        status_frame.pack(fill=tk.X, side=tk.BOTTOM)
+        status_frame.pack_propagate(False)
+        
+        self.status_var = tk.StringVar(value="Ready")
+        status_label = tk.Label(status_frame, textvariable=self.status_var,
+                               font=("Arial", 9), fg="#e0e0e0", bg="#2c2c2c")
+        status_label.pack(anchor=tk.W, padx=15, pady=5)
+    
+    def create_card(self, parent, title, height=None):
+        """Create a styled card frame"""
+        card = tk.Frame(parent, bg="white", relief=tk.FLAT, bd=1)
+        card.pack(fill=tk.X, pady=(0, 15))
+        if height:
+            card.pack(fill=tk.BOTH, expand=True)
+        
+        # Card header
+        header = tk.Frame(card, bg=self.bg_header)
+        header.pack(fill=tk.X)
+        
+        title_label = tk.Label(header, text=title, font=("Arial", 11, "bold"),
+                              fg=self.text_light, bg=self.bg_header)
+        title_label.pack(anchor=tk.W, padx=15, pady=10)
+        
+        return card
+    
+    def save_api_key(self):
+        """Save API key"""
+        self.api_key = self.key_entry.get().strip()
+        if not self.api_key:
+            messagebox.showerror("Error", "Please enter your Groq API key")
+            return
+        
+        try:
+            with open(self.config_file, 'w') as f:
+                json.dump({'api_key': self.api_key}, f)
+            messagebox.showinfo("Success", "API key saved securely")
+            self.status_var.set("API key saved")
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to save: {e}")
+    
+    def choose_file(self):
+        """Choose PDF file"""
+        file_path = filedialog.askopenfilename(
+            title="Select PDF File",
+            filetypes=[("PDF files", "*.pdf"), ("All files", "*.*")]
+        )
+        
+        if file_path:
+            self.pdf_path = file_path
+            filename = Path(file_path).name
+            self.file_label.config(text=f"Selected: {filename}", fg=self.text_dark)
+            self.status_var.set(f"Loaded: {filename}")
+    
+    def pdf_to_images(self, pdf_path):
+        """Convert PDF pages to base64 JPEG images"""
+        images = []
+        try:
+            pdf = fitz.open(pdf_path)
+            
+            for page_num in range(len(pdf)):
+                page = pdf[page_num]
+                pix = page.get_pixmap(matrix=fitz.Matrix(2, 2))
+                image_data = pix.tobytes("jpeg")
+                b64 = base64.b64encode(image_data).decode('utf-8')
+                images.append(b64)
+            
+            pdf.close()
+            return images
+        except Exception as e:
+            raise Exception(f"Failed to convert PDF: {e}")
+    
+    def extract_data(self, image_base64):
+        """Call Groq API to extract data"""
+        if not self.api_key:
+            raise Exception("No Groq API key configured")
+        
+        prompt = """CRITICAL: Extract hand-written thickness gauges from JR Plastics certification form.
 
-/* MAIN AREA */
-.main-area{width:100%;flex:1;display:flex;flex-direction:column;align-items:center;padding:24px 16px 48px;gap:0;}
+GAUGE LAYOUT:
+- TOP ROW: 9 gauges (t1-t9), read LEFT TO RIGHT
+- BOTTOM ROW: 10 gauges (t10-t19), read LEFT TO RIGHT
 
-/* UPLOAD ZONE (shown when no tabs) */
-.upload-zone{width:100%;max-width:700px;border:2px dashed #3a3028;border-radius:6px;padding:48px 32px;text-align:center;cursor:pointer;transition:all .15s;background:rgba(255,255,255,.02);margin-top:24px;}
-.upload-zone:hover,.upload-zone.dragover{border-color:#c0392b;background:rgba(192,57,43,.06);}
-.upload-zone-icon{font-size:48px;margin-bottom:12px;opacity:.4;}
-.upload-zone-title{font-family:'Special Elite',serif;font-size:22px;color:#c8b89a;letter-spacing:2px;margin-bottom:8px;}
-.upload-zone-sub{font-family:'DM Mono',monospace;font-size:11px;color:#6a5a4a;letter-spacing:1px;line-height:1.8;}
-.btn-browse-big{margin-top:16px;font-family:'DM Mono',monospace;font-size:11px;padding:10px 24px;background:#c0392b;color:#fff;border:none;border-radius:2px;cursor:pointer;letter-spacing:1px;}
+INSTRUCTIONS:
+1. Carefully read EACH hand-written number
+2. Gauges are decimal measurements (e.g., 0.125, 0.250, 1.500)
+3. Read numbers even if slightly smudged or unclear
+4. If unreadable, use empty string ""
+5. Do NOT guess or estimate
 
-/* FORM WRAPPER */
-.form-wrap{width:100%;max-width:860px;display:none;}
-.form-wrap.visible{display:block;}
-
-/* PAPER */
-.paper{background:var(--paper);background-image:repeating-linear-gradient(0deg,transparent,transparent 27px,rgba(0,0,0,.04) 27px,rgba(0,0,0,.04) 28px);border-radius:2px;box-shadow:0 8px 40px var(--shadow);padding:36px 44px 44px;position:relative;}
-.paper::before{content:'';position:absolute;top:0;left:50px;width:2px;height:100%;background:rgba(200,100,100,.15);border-radius:1px;}
-.doc-header{text-align:center;border-bottom:3px double var(--ink);padding-bottom:10px;margin-bottom:16px;}
-.doc-title{font-family:'Special Elite',serif;font-size:24px;letter-spacing:3px;text-transform:uppercase;color:var(--ink);text-decoration:underline;text-underline-offset:4px;}
-.doc-rev{font-family:'DM Mono',monospace;font-size:10px;color:var(--ink-light);margin-top:2px;letter-spacing:1px;}
-.company-name{font-family:'Special Elite',serif;font-size:15px;margin-top:8px;color:var(--ink);}
-.company-addr{font-family:'DM Mono',monospace;font-size:10px;color:var(--ink-light);line-height:1.7;margin-top:2px;}
-.section-title{font-family:'Special Elite',serif;font-size:13px;text-transform:uppercase;letter-spacing:2px;color:var(--accent);border-bottom:1px solid var(--rule);padding-bottom:4px;margin:20px 0 10px;}
-.row{display:flex;gap:10px;margin-bottom:9px;align-items:flex-end;flex-wrap:wrap;}
-.field{display:flex;flex-direction:column;gap:3px;flex:1;min-width:90px;}
-.field.wide{flex:2;}
-.field.narrow{flex:0 0 88px;}
-.field.xnarrow{flex:0 0 68px;}
-label{font-family:'DM Mono',monospace;font-size:10px;font-weight:500;letter-spacing:1px;text-transform:uppercase;color:var(--ink-light);}
-label span.hint{font-weight:400;font-size:9px;color:var(--rule);display:block;letter-spacing:.5px;margin-top:1px;}
-input[type=text],input[type=date],input[type=time]{font-family:'Special Elite',serif;font-size:15px;color:var(--ink);background:var(--field-bg);border:none;border-bottom:1.5px solid var(--field-border);border-radius:0;padding:4px 4px 2px;width:100%;outline:none;transition:border-color .15s,background .15s;letter-spacing:.5px;}
-input:focus{border-bottom-color:var(--accent);background:#fff;}
-input[readonly]{background:var(--field-bg);cursor:default;}
-.thickness-grid{display:grid;grid-template-columns:repeat(10,1fr);gap:5px;margin-bottom:3px;}
-.thickness-grid input{text-align:center;font-size:13px;}
-.thickness-note{font-family:'DM Mono',monospace;font-size:9px;color:var(--rule);font-style:italic;margin-top:1px;}
-.tolerances{background:rgba(0,0,0,.04);border-left:3px solid var(--rule);padding:7px 11px;margin:6px 0 10px;font-family:'DM Mono',monospace;font-size:10px;color:var(--ink-light);line-height:1.6;}
-.tolerances strong{color:var(--ink);}
-.toggle-group{display:flex;gap:5px;margin-top:2px;}
-.toggle-btn{font-family:'DM Mono',monospace;font-size:11px;font-weight:500;padding:4px 9px;border:1.5px solid var(--field-border);border-radius:2px;background:transparent;color:var(--ink-light);cursor:pointer;transition:all .12s;letter-spacing:1px;}
-.toggle-btn.active-yes,.toggle-btn.active-pass{background:#2e6b3e;color:#fff;border-color:#2e6b3e;}
-.toggle-btn.active-no,.toggle-btn.active-fail{background:var(--accent);color:#fff;border-color:var(--accent);}
-.weld-row{display:flex;gap:18px;flex-wrap:wrap;margin-bottom:4px;}
-.weld-item{display:flex;flex-direction:column;gap:4px;}
-.quality-group{display:flex;gap:7px;flex-wrap:wrap;}
-.quality-btn{font-family:'DM Mono',monospace;font-size:10px;padding:5px 13px;border:1.5px solid var(--field-border);border-radius:2px;background:transparent;color:var(--ink-light);cursor:pointer;transition:all .12s;letter-spacing:1px;text-transform:uppercase;}
-.quality-btn.active{background:#2e6b3e;color:#fff;border-color:#2e6b3e;}
-.quality-btn.active-fair{background:#d4851e;color:#fff;border-color:#d4851e;}
-.quality-btn.active-poor{background:var(--accent);color:#fff;border-color:var(--accent);}
-.divider{border:none;border-top:1px dashed var(--rule);margin:16px 0;}
-.note-box{background:rgba(0,0,0,.04);border:1px solid var(--rule);padding:9px 13px;margin:10px 0;font-family:'DM Mono',monospace;font-size:10px;color:var(--ink-light);line-height:1.6;font-style:italic;text-align:center;}
-input.autofilled{background:#e8f8ee!important;border-bottom-color:#2e6b3e!important;}
-
-/* STATUS BANNER */
-#status-banner{display:none;position:fixed;bottom:20px;right:20px;background:#2e6b3e;color:#fff;font-family:'DM Mono',monospace;font-size:12px;padding:10px 18px;border-radius:2px;box-shadow:0 4px 20px rgba(0,0,0,.4);z-index:9999;letter-spacing:1px;}
-
-/* PROGRESS BAR */
-.progress-bar-wrap{width:100%;max-width:860px;display:none;flex-direction:column;gap:6px;padding:12px 0;}
-.progress-bar-wrap.visible{display:flex;}
-.progress-bar-bg{background:#2a2420;border-radius:2px;height:6px;overflow:hidden;}
-.progress-bar{height:100%;background:#c0392b;border-radius:2px;transition:width .3s;width:0%;}
-.progress-label{font-family:'DM Mono',monospace;font-size:11px;color:#8a7a6a;letter-spacing:.5px;}
-
-/* PRINT CONTAINER */
-#batch-print-container{position:absolute;left:-9999px;top:0;width:820px;}
-
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
-
-@media print{
-  .topbar,.tab-bar-wrap,#status-banner,.progress-bar-wrap{display:none!important;}
-  body{background:#fff;padding:0;}
-  .main-area{padding:0;}
-  .paper{box-shadow:none;padding:20px 28px;background-image:none;}
-  .paper::before{display:none;}
-  input{border-bottom-color:#000;background:transparent!important;}
-  .toggle-btn,.quality-btn{border:1px solid #000;print-color-adjust:exact;-webkit-print-color-adjust:exact;}
-}
-</style>
-</head>
-<body>
-
-<!-- TOPBAR -->
-<div class="topbar">
-  <span class="topbar-title">JR Plastics Corp -- Cert Record</span>
-
-  <div class="btn-group">
-    <span class="cert-count" id="cert-count"></span>
-    <button class="btn btn-upload" onclick="document.getElementById('main-file-input').click()">? Upload PDFs</button>
-    <input type="file" id="main-file-input" accept=".pdf" multiple style="display:none" onchange="handleFileUpload(this)">
-    <button class="btn btn-process" id="btn-process" onclick="processAll()" style="display:none;">? Auto-Fill All</button>
-    <button class="btn btn-save" onclick="saveAllDraft()">? Save All</button>
-    <button class="btn btn-printall" id="btn-printall" onclick="printAll()" style="display:none;">? Download All PDF</button>
-  </div>
-</div>
-
-<!-- TAB BAR -->
-<div class="tab-bar-wrap">
-  <div class="tab-bar" id="tab-bar">
-    <span class="tab-empty" id="tab-empty">No certs loaded -- upload PDFs or add a blank cert</span>
-    <span class="tab-add" id="tab-add-btn" onclick="addBlankTab()" title="Add blank cert">+</span>
-  </div>
-</div>
-
-<!-- MAIN AREA -->
-<div class="main-area" id="main-area">
-
-  <!-- Upload zone (shown when no certs) -->
-  <div class="upload-zone" id="upload-zone"
-       onclick="document.getElementById('main-file-input').click()"
-       ondragover="zoneDragOver(event)" ondragleave="zoneDragLeave(event)" ondrop="zoneDrop(event)">
-    <div class="upload-zone-icon">?</div>
-    <div class="upload-zone-title">Upload Cert Scans</div>
-    <div class="upload-zone-sub">
-      Drop up to 16 PDF cert scans here<br>
-      Each PDF gets its own tab -- auto-fill, edit, then print all at once
-    </div>
-    <button class="btn-browse-big" onclick="event.stopPropagation();document.getElementById('main-file-input').click()">Browse PDFs</button>
-  </div>
-
-  <!-- Progress bar -->
-  <div class="progress-bar-wrap" id="progress-wrap">
-    <div class="progress-label" id="progress-label">Processing...</div>
-    <div class="progress-bar-bg"><div class="progress-bar" id="progress-bar"></div></div>
-  </div>
-
-  <!-- Form wrapper (hidden until tabs exist) -->
-  <div class="form-wrap" id="form-wrap">
-    <div class="paper">
-      <div class="doc-header">
-        <div class="doc-title">Supplier Test &amp; Certification Record</div>
-        <div class="doc-rev">JR-3 REV(9) &nbsp;?&nbsp; 2/15/17</div>
-        <div class="company-name">JR Plastics Corporation</div>
-        <div class="company-addr">5111 South Pine Avenue ? Suite "G" ? Ocala, FL 34480</div>
-      </div>
-
-      <div class="section-title">Shipment Identification</div>
-      <div class="row">
-        <div class="field wide">
-          <label>PO # <span class="hint">Enter once, apply to all certs</span></label>
-          <div style="display:flex;gap:6px;align-items:flex-end;">
-            <input type="text" id="po_number" placeholder="e.g. 07006939" oninput="markEdited()" style="flex:1;">
-            <button onclick="applyPOToAll()" title="Apply this PO# to every cert" style="font-family:'DM Mono',monospace;font-size:10px;font-weight:500;letter-spacing:1px;padding:5px 10px;background:#1a3a6a;color:#a8c8f0;border:none;border-radius:2px;cursor:pointer;white-space:nowrap;flex-shrink:0;margin-bottom:2px;" onmouseover="this.style.background='#2a4a7a'" onmouseout="this.style.background='#1a3a6a'">-> All Certs</button>
-          </div>
-        </div>
-        <div class="field"><label>Pallet #</label><input type="text" id="pallet_number" placeholder="--" oninput="markEdited()"></div>
-        <div class="field"><label>Railcar #</label><input type="text" id="railcar_number" placeholder="--" oninput="markEdited()"></div>
-        <div class="field narrow"><label>Date</label><input type="date" id="date" oninput="markEdited()"></div>
-      </div>
-      <div class="row">
-        <div class="field"><label>Pieces</label><input type="text" id="pieces" placeholder="count" oninput="markEdited()"></div>
-        <div class="field"><label>Packer</label><input type="text" id="packer" placeholder="name / ID" oninput="markEdited()"></div>
-        <div class="field wide"><label>Operator</label><input type="text" id="operator" placeholder="name / ID" oninput="markEdited()"></div>
-      </div>
-
-      <div class="section-title">Thickness Readings</div>
-      <div class="tolerances"><strong>Tolerances:</strong>  1/4 "->.242-.257 |  3/8 "->.334-.354 |  1/2 "->.455-.483 |  3/4 "->.697-.740 | 1"->.940-.998</div>
-      <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--rule);margin-bottom:3px;letter-spacing:1px;text-transform:uppercase;">Zone Readings -- Row 1</div>
-      <div class="thickness-grid">
-        <input type="text" id="t1" placeholder="Z1" oninput="markEdited()"><input type="text" id="t2" placeholder="Z2" oninput="markEdited()">
-        <input type="text" id="t3" placeholder="Z3" oninput="markEdited()"><input type="text" id="t4" placeholder="Z4" oninput="markEdited()">
-        <input type="text" id="t5" placeholder="Z5" oninput="markEdited()"><input type="text" id="t6" placeholder="Z6" oninput="markEdited()">
-        <input type="text" id="t7" placeholder="Z7" oninput="markEdited()"><input type="text" id="t8" placeholder="Z8" oninput="markEdited()">
-        <input type="text" id="t9" placeholder="Z9" oninput="markEdited()"><input type="text" id="t10" placeholder="Z10" oninput="markEdited()">
-      </div>
-      <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--rule);margin:5px 0 3px;letter-spacing:1px;text-transform:uppercase;">Row 2</div>
-      <div class="thickness-grid">
-        <input type="text" id="t11" placeholder="Z11" oninput="markEdited()"><input type="text" id="t12" placeholder="Z12" oninput="markEdited()">
-        <input type="text" id="t13" placeholder="Z13" oninput="markEdited()"><input type="text" id="t14" placeholder="Z14" oninput="markEdited()">
-        <input type="text" id="t15" placeholder="Z15" oninput="markEdited()"><input type="text" id="t16" placeholder="Z16" oninput="markEdited()">
-        <input type="text" id="t17" placeholder="Z17" oninput="markEdited()"><input type="text" id="t18" placeholder="Z18" oninput="markEdited()">
-        <input type="text" id="t19" placeholder="Z19" oninput="markEdited()"><input type="text" id="t20" placeholder="Z20" oninput="markEdited()">
-      </div>
-      <div class="thickness-note">* Averages taken every hour of each zone per pallet</div>
-
-      <div class="section-title">Dimensions &amp; Properties</div>
-      <div class="row">
-        <div class="field"><label>Length <span class="hint">Actual ?  1/2 "</span></label><input type="text" id="length" placeholder='e.g. 96"' oninput="markEdited()"></div>
-        <div class="field"><label>Width <span class="hint">Actual ?  1/4 "</span></label><input type="text" id="width" placeholder='e.g. 48"' oninput="markEdited()"></div>
-        <div class="field"><label>Squareness <span class="hint">Largest Meas. ?1/8"</span></label><input type="text" id="squareness" value="1/8" readonly></div>
-      </div>
-      <div class="row">
-        <div class="field"><label>Wings <span class="hint">? .020</span></label><input type="text" id="wings" value=".018" readonly></div>
-        <div class="field"><label>U.V. Additives <span class="hint">3/8% Blk &amp; Nat</span></label><input type="text" id="uv_additives" value="3/8%" readonly></div>
-        <div class="field"><label>Reprocessed Levels <span class="hint">20% Max</span></label><input type="text" id="reprocessed" value="20%" readonly></div>
-      </div>
-      <div class="row">
-        <div class="field"><label>Surface Finish</label><input type="text" id="surface_finish" placeholder="--" oninput="markEdited()"></div>
-        <div class="field"><label>Shrinkage <span class="hint">7% Max</span></label><input type="text" id="shrinkage" value="1.3%" readonly></div>
-        <div class="field"><label>Color <span class="hint">0% Nat / 2%</span></label><input type="text" id="color" value="2%" readonly></div>
-        <div class="field narrow">
-          <label>Labels <span class="hint">Machine Surface</span></label>
-          <div class="toggle-group">
-            <button class="toggle-btn active-yes" style="cursor:default;">YES</button>
-          </div>
-          <input type="hidden" id="labels" value="YES">
-        </div>
-      </div>
-      <div class="note-box">The above processes are to be conducted once every hour or per pallet.<br>Including any changes in shift, operator or material change by Lot.</div>
-
-      <div class="section-title">Weld Test &amp; Spark Test</div>
-      <div class="weld-row">
-        <div class="weld-item">
-          <label>Weld -- Top <span class="hint">Per UPF Special Instruction Card</span></label>
-          <div class="toggle-group"><button class="toggle-btn active-yes" style="cursor:default;">YES</button></div>
-          <input type="hidden" id="weld_top" value="YES">
-        </div>
-        <div class="weld-item">
-          <label>Weld -- Middle</label>
-          <div class="toggle-group"><button class="toggle-btn active-yes" style="cursor:default;">YES</button></div>
-          <input type="hidden" id="weld_mid" value="YES">
-        </div>
-        <div class="weld-item">
-          <label>Weld -- Bottom</label>
-          <div class="toggle-group"><button class="toggle-btn active-yes" style="cursor:default;">YES</button></div>
-          <input type="hidden" id="weld_bot" value="YES">
-        </div>
-        <div class="weld-item">
-          <label>Spark Test <span class="hint">Recorded on Prod. Cert. JR-4 REV(7)</span></label>
-          <div class="toggle-group"><button class="toggle-btn active-pass" style="cursor:default;">PASS</button></div>
-          <input type="hidden" id="spark" value="PASS">
-        </div>
-      </div>
-
-      <hr class="divider">
-
-      <div class="section-title">Sampling Requirements -- Final Outgoing Inspection</div>
-      <div class="note-box" style="margin-top:0;">The following inspection has been the final outgoing inspection from the supplier prior to shipment.</div>
-      <div class="row" style="margin-top:10px;">
-        <div class="field wide">
-          <label>Surface Quality</label>
-          <div class="quality-group">
-            <button class="quality-btn active" style="cursor:default;">Good</button>
-          </div>
-          <input type="hidden" id="surface_quality" value="Good">
-        </div>
-        <div class="field wide">
-          <label>Packaging</label>
-          <div class="quality-group">
-            <button class="quality-btn active" style="cursor:default;">Good</button>
-          </div>
-          <input type="hidden" id="packaging" value="Good">
-        </div>
-      </div>
-      <div class="row" style="margin-top:8px;">
-        <div class="field"><label>Final QC</label><input type="text" id="final_qc" value="A" readonly></div>
-        <div class="field narrow"><label>QC Date</label><input type="date" id="qc_date" oninput="markEdited()"></div>
-      </div>
-      <hr class="divider">
-      <div class="row">
-        <div class="field wide"><label>UPF Receiver</label><input type="text" id="upf_receiver" placeholder="name / ID" oninput="markEdited()"></div>
-        <div class="field narrow"><label>Received Date</label><input type="date" id="recv_date" oninput="markEdited()"></div>
-        <div class="field xnarrow"><label>Time</label><input type="time" id="recv_time" oninput="markEdited()"></div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<div id="status-banner"></div>
-
-
-<script>
-pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-
-// -- ALL FORM FIELD IDs --
-const ALL_FIELDS=['po_number','pallet_number','railcar_number','date','pieces','packer','operator',
-  't1','t2','t3','t4','t5','t6','t7','t8','t9','t10','t11','t12','t13','t14','t15','t16','t17','t18','t19','t20',
-  'length','width','squareness','surface_finish','shrinkage','color','wings','uv_additives','reprocessed',
-  'labels','weld_top','weld_mid','weld_bot','spark','surface_quality','packaging','final_qc',
-  'qc_date','upf_receiver','recv_date','recv_time'];
-
-const CONSTANTS={squareness:'1/8',wings:'.018',uv_additives:'3/8%',reprocessed:'20%',
-  shrinkage:'1.3%',color:'2%',labels:'YES',weld_top:'YES',weld_mid:'YES',weld_bot:'YES',
-  spark:'PASS',surface_quality:'Good',packaging:'Good',final_qc:'A'};
-
-const CONST_SET=new Set(Object.keys(CONSTANTS));
-
-// -- TAB STATE --
-// Each tab: { id, name, file, status:'pending'|'processing'|'done'|'edited', data:{} }
-let tabs=[];
-let activeTabId=null;
-
-function blankData(){
-  const d={};
-  ALL_FIELDS.forEach(k=>d[k]='');
-  Object.assign(d,CONSTANTS);
-  d.date=new Date().toISOString().slice(0,10);
-  return d;
-}
-
-function showBanner(msg,color='#2e6b3e'){
-  const b=document.getElementById('status-banner');
-  b.textContent=msg;b.style.background=color;b.style.display='block';
-  clearTimeout(b._t);b._t=setTimeout(()=>b.style.display='none',2800);
-}
-function flashField(el){el.classList.add('autofilled');setTimeout(()=>el.classList.remove('autofilled'),3000);}
-
-// -- READ / WRITE FORM --
-function readForm(){
-  const d={};
-  ALL_FIELDS.forEach(id=>{const e=document.getElementById(id);if(e)d[id]=e.value;});
-  return d;
-}
-function writeForm(data){
-  ALL_FIELDS.forEach(id=>{
-    const el=document.getElementById(id);
-    if(!el)return;
-    el.value=data[id]||'';
-  });
-}
-
-// -- MARK EDITED --
-function markEdited(){
-  const tab=tabs.find(t=>t.id===activeTabId);
-  if(tab&&tab.status==='done')tab.status='edited';
-  renderTabs();
-}
-
-// -- TAB MANAGEMENT --
-function addBlankTab(){
-  const id='tab_'+Date.now();
-  const num=tabs.length+1;
-  tabs.push({id,name:'Cert '+num,file:null,status:'pending',data:blankData()});
-  switchTab(id);
-  renderTabs();
-  updateUI();
-}
-
-function removeTab(id,e){
-  e.stopPropagation();
-  tabs=tabs.filter(t=>t.id!==id);
-  if(activeTabId===id)activeTabId=tabs.length?tabs[tabs.length-1].id:null;
-  if(activeTabId)switchTab(activeTabId);
-  renderTabs();
-  updateUI();
-}
-
-function switchTab(id){
-  // Save current form to active tab
-  if(activeTabId){
-    const cur=tabs.find(t=>t.id===activeTabId);
-    if(cur)cur.data=readForm();
-  }
-  activeTabId=id;
-  const tab=tabs.find(t=>t.id===id);
-  if(tab){writeForm(tab.data);}
-  renderTabs();
-}
-
-function renderTabs(){
-  const bar=document.getElementById('tab-bar');
-  const empty=document.getElementById('tab-empty');
-  bar.innerHTML='';
-
-  if(tabs.length===0){
-    bar.appendChild(Object.assign(document.createElement('span'),{className:'tab-empty',id:'tab-empty',textContent:'No certs loaded -- upload PDFs or add a blank cert'}));
-  } else {
-    tabs.forEach(tab=>{
-      const el=document.createElement('div');
-      el.className='tab'+(tab.id===activeTabId?' active':'');
-      el.onclick=()=>switchTab(tab.id);
-
-      const dot=document.createElement('span');
-      dot.className='tab-status '+tab.status;
-
-      const label=document.createElement('span');
-      label.textContent=tab.name;
-
-      const rm=document.createElement('span');
-      rm.className='tab-remove';
-      rm.textContent='x';
-      rm.title='Remove';
-      rm.onclick=(e)=>removeTab(tab.id,e);
-
-      el.appendChild(dot);el.appendChild(label);el.appendChild(rm);
-      bar.appendChild(el);
-    });
-  }
-
-  const addBtn=document.createElement('span');
-  addBtn.className='tab-add';addBtn.title='Add blank cert';
-  addBtn.textContent='+';addBtn.onclick=addBlankTab;
-  bar.appendChild(addBtn);
-}
-
-function updateUI(){
-  const hasTabs=tabs.length>0;
-  document.getElementById('upload-zone').style.display=hasTabs?'none':'block';
-  document.getElementById('form-wrap').classList.toggle('visible',hasTabs);
-  document.getElementById('btn-process').style.display=hasTabs?'inline-block':'none';
-  document.getElementById('btn-printall').style.display=hasTabs?'inline-block':'none';
-  const pending=tabs.filter(t=>t.file&&(t.status==='pending'||t.status==='done'||t.status==='edited'));
-  document.getElementById('cert-count').textContent=hasTabs?tabs.length+' cert'+(tabs.length!==1?'s':''):'';
-}
-
-// -- FILE UPLOAD --
-// Cache PDF binary data in memory so we can re-read pages reliably
-const pdfCache = {}; // tabId -> { data: Uint8Array, pageNum: number }
-
-function handleFileUpload(input){
-  const files=[...input.files].filter(f=>f.type==='application/pdf');
-  addFiles(files);input.value='';
-}
-function zoneDragOver(e){e.preventDefault();document.getElementById('upload-zone').classList.add('dragover');}
-function zoneDragLeave(e){document.getElementById('upload-zone').classList.remove('dragover');}
-function zoneDrop(e){
-  e.preventDefault();document.getElementById('upload-zone').classList.remove('dragover');
-  addFiles([...e.dataTransfer.files].filter(f=>f.type==='application/pdf'));
-}
-
-async function addFiles(files){
-  let added=0;
-  for(const file of files){
-    try{
-      const ab=await file.arrayBuffer();
-      const pdfData=new Uint8Array(ab);
-      // Use a fresh copy for pdfjsLib so it doesn't detach the buffer
-      const doc=await pdfjsLib.getDocument({data:pdfData.slice(0)}).promise;
-      const pageCount=doc.numPages;
-      for(let p=1;p<=pageCount;p++){
-        if(tabs.length>=16){showBanner('? Max 16 certs','#c0392b');break;}
-        const id='tab_'+Date.now()+'_'+Math.random().toString(36).slice(2);
-        const name=pageCount>1?`Page ${p} of ${pageCount}`:(file.name.replace(/\.pdf$/i,'').slice(0,18));
-        pdfCache[id]={data:pdfData,pageNum:p};
-        tabs.push({id,name,status:'pending',data:blankData()});
-        if(!activeTabId)activeTabId=id;
-        added++;
-      }
-    }catch(err){
-      console.error('PDF read error:',err);
-      showBanner('? Could not read PDF: '+file.name,'#c0392b');
-    }
-  }
-  if(added){
-    switchTab(activeTabId);
-    renderTabs();
-    updateUI();
-    showBanner('? '+added+' page'+(added!==1?'s':'')+' detected -- click ? Auto-Fill All');
-  }
-}
-
-// -- THICKNESS FIX --
-function fixThickness(raw){
-  if(!raw)return'';
-  const s=String(raw).trim().replace(/[^\d.]/g,'');
-  if(!s)return'';
-  let n=parseFloat(s);
-  if(isNaN(n))return'';
-  if(n<2)n=Math.round(n*1000);
-  return String(Math.round(n)-2);
-}
-
-// -- GROQ API KEY NOW HANDLED BY BACKEND --
-// No longer needed - Groq API key is configured as Netlify environment variable
-
-// -- CALL BACKEND FUNCTION --
-async function callExtract(imageBase64){
-  // Call the Netlify backend function which handles Groq API
-  const response = await fetch('/.netlify/functions/extract', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ imageBase64 })
-  });
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || `Server error ${response.status}`);
-  }
-
-  const extracted = await response.json();
-  return extracted;
-}
-
-// -- RENDER PDF PAGE TO BASE64 (uses cached data) --
-async function pdfToBase64(tabId){
-  const cached=pdfCache[tabId];
-  if(!cached)throw new Error('No PDF data cached for this tab');
-  const doc=await pdfjsLib.getDocument({data:cached.data.slice(0)}).promise;
-  const page=await doc.getPage(cached.pageNum);
-  const vp=page.getViewport({scale:3.0});
-  const canvas=document.createElement('canvas');
-  canvas.width=vp.width;canvas.height=vp.height;
-  await page.render({canvasContext:canvas.getContext('2d'),viewport:vp}).promise;
-  return canvas.toDataURL('image/jpeg',.95).split(',')[1];
-}
-
-// -- PROCESS ALL --
-async function processAll(){
-  const toProcess=tabs.filter(t=>pdfCache[t.id]&&t.status==='pending');
-  if(!toProcess.length){showBanner('? No pending certs to process','#c0392b');return;}
-
-  const btn=document.getElementById('btn-process');
-  btn.disabled=true;btn.textContent='? Processing...';
-  const progWrap=document.getElementById('progress-wrap');
-  const progBar=document.getElementById('progress-bar');
-  const progLabel=document.getElementById('progress-label');
-  progWrap.classList.add('visible');
-
-  for(let i=0;i<toProcess.length;i++){
-    const tab=toProcess[i];
-    tab.status='processing';
-    if(activeTabId===tab.id)writeForm(tab.data);
-    renderTabs();
-    progLabel.textContent=`Processing ${i+1} of ${toProcess.length}: ${tab.name}...`;
-    progBar.style.width=(((i)/toProcess.length)*100)+'%';
-
-    try{
-      const cached=pdfCache[tab.id];
-      if(!cached){
-        throw new Error('PDF not found -- please re-upload the file');
-      }
-      const b64=await pdfToBase64(tab.id);
-      
-      // Much longer delay needed for Groq free tier (very strict rate limits)
-      // Processing with images is slower, so we need longer waits
-      if(i>0) await new Promise(r=>setTimeout(r,8000));
-      
-      // Retry logic for rate limit errors
-      let extracted;
-      let retries=0;
-      while(retries<3){
-        try{
-          extracted=await callExtract(b64);
-          break;
-        }catch(e){
-          if(e.message.includes('rate limit')){
-            retries++;
-            if(retries<3){
-              progLabel.textContent=`Rate limited, waiting... (retry ${retries}/3)`;
-              await new Promise(r=>setTimeout(r,8000));
-              continue;
-            }
-          }
-          throw e;
+Return ONLY valid JSON with ALL fields:
+{"po_number":"", "pallet_number":"", "railcar_number":"", "date":"", "pieces":"", "packer":"", "operator":"", "t1":"", "t2":"", "t3":"", "t4":"", "t5":"", "t6":"", "t7":"", "t8":"", "t9":"", "t10":"", "t11":"", "t12":"", "t13":"", "t14":"", "t15":"", "t16":"", "t17":"", "t18":"", "t19":"", "length":"", "width":"", "surface_finish":"", "qc_date":"", "upf_receiver":"", "recv_date":"", "recv_time":""}"""
+        
+        headers = {
+            'Content-Type': 'application/json',
+            'Authorization': f'Bearer {self.api_key}'
         }
-      }
-      // Apply thickness correction
-      ['t1','t2','t3','t4','t5','t6','t7','t8','t9','t10','t11','t12','t13','t14','t15','t16','t17','t18','t19','t20'].forEach(id=>{
-        extracted[id]=fixThickness(extracted[id]);
-      });
-      // Merge constants (never overwrite)
-      const data=Object.assign({},blankData());
-      // Fill extracted non-constant fields
-      Object.keys(extracted).forEach(k=>{if(!CONST_SET.has(k))data[k]=extracted[k]||'';});
-      // Use PO# or pallet as tab name if available
-      if(extracted.po_number)tab.name='PO '+extracted.po_number.slice(-6);
-      else if(extracted.pallet_number)tab.name='Pallet '+extracted.pallet_number;
-      tab.data=data;
-      tab.status='done';
-      // If this is the active tab, update the form live
-      if(activeTabId===tab.id){writeForm(data);}
-    }catch(err){
-      console.error('Autofill error on tab',tab.name,err);
-      tab.status='pending';
-      showBanner('? '+tab.name+': '+(err.message||'Unknown error'),'#c0392b');
-    }
-    renderTabs();
-  }
+        
+        payload = {
+            'model': 'qwen/qwen3.6-27b',
+            'max_tokens': 2000,
+            'messages': [{
+                'role': 'user',
+                'content': [
+                    {
+                        'type': 'image_url',
+                        'image_url': {'url': f'data:image/jpeg;base64,{image_base64}'}
+                    },
+                    {'type': 'text', 'text': prompt}
+                ]
+            }]
+        }
+        
+        for attempt in range(5):  # More retries for rate limiting
+            try:
+                response = requests.post(
+                    'https://api.groq.com/openai/v1/chat/completions',
+                    headers=headers,
+                    json=payload,
+                    timeout=30
+                )
+                
+                if response.status_code == 429:
+                    if attempt < 4:
+                        wait_time = 15 + (attempt * 5)  # Exponential backoff: 15, 20, 25, 30 seconds
+                        time.sleep(wait_time)
+                        continue
+                    raise Exception("Rate limit exceeded after retries - upgrade Groq account")
+                
+                if not response.ok:
+                    raise Exception(f"API error {response.status_code}")
+                
+                data = response.json()
+                text = data.get('choices', [{}])[0].get('message', {}).get('content', '')
+                
+                if not text:
+                    raise Exception("Empty response")
+                
+                # Clean response
+                text = text.replace('<think>', '').replace('</think>', '').strip()
+                text = text.replace('```json', '').replace('```', '').strip()
+                
+                # Try to parse JSON
+                try:
+                    return json.loads(text)
+                except:
+                    # Try to extract JSON object
+                    import re
+                    match = re.search(r'\{[\s\S]*\}', text)
+                    if match:
+                        return json.loads(match.group())
+                    raise Exception("Could not parse JSON")
+            
+            except Exception as e:
+                if attempt == 4:
+                    raise
+                if "rate limit" in str(e).lower():
+                    wait_time = 15 + (attempt * 5)
+                    time.sleep(wait_time)
+                else:
+                    time.sleep(3)
+    
+    def process_pdf(self):
+        """Process PDF in background"""
+        if not self.pdf_path:
+            messagebox.showerror("Error", "Please select a PDF file first")
+            return
+        
+        if not self.api_key:
+            messagebox.showerror("Error", "Please save your Groq API key first")
+            return
+        
+        if self.is_processing:
+            messagebox.showwarning("Warning", "Already processing a file")
+            return
+        
+        self.is_processing = True
+        self.process_btn.config(state=tk.DISABLED)
+        
+        thread = threading.Thread(target=self._process_pdf_thread)
+        thread.start()
+    
+    def _process_pdf_thread(self):
+        """Background processing thread"""
+        try:
+            self.progress_var.set("Converting PDF to images...")
+            self.root.update()
+            
+            images = self.pdf_to_images(self.pdf_path)
+            self.results = []
+            self.progress_bar.config(maximum=len(images))
+            
+            if len(images) > 1:
+                self.status_var.set(f"Processing {len(images)} pages (this may take a few minutes due to Groq rate limits)...")
+            
+            for i, img_b64 in enumerate(images):
+                if not self.is_processing:
+                    break
+                
+                self.progress_var.set(f"Processing page {i+1} of {len(images)}...")
+                self.progress_bar.config(value=i)
+                self.root.update()
+                
+                try:
+                    extracted = self.extract_data(img_b64)
+                    extracted['page'] = i + 1
+                    self.results.append(extracted)
+                except Exception as e:
+                    self.results.append({
+                        'page': i + 1,
+                        'error': str(e)
+                    })
+                
+                if i < len(images) - 1:
+                    time.sleep(10)  # 10 second delay between pages to avoid rate limiting
+            
+            self.progress_bar.config(value=len(images))
+            self.progress_var.set(f"Complete! Processed {len(self.results)} pages")
+            self.display_results()
+            self.status_var.set(f"Successfully processed {len(images)} pages")
+            messagebox.showinfo("Success", f"Processed {len(images)} pages")
+        
+        except Exception as e:
+            self.progress_var.set("Error occurred")
+            self.status_var.set(f"Error: {str(e)}")
+            messagebox.showerror("Error", f"Processing failed: {str(e)}")
+        
+        finally:
+            self.is_processing = False
+            self.process_btn.config(state=tk.NORMAL)
+    
+    def display_results(self):
+        """Display results and show gauge verification if available"""
+        self.results_text.config(state=tk.NORMAL)
+        self.results_text.delete(1.0, tk.END)
+        
+        # Check if we have gauges to verify
+        has_gauges = False
+        for result in self.results:
+            if 'error' not in result:
+                for i in range(1, 20):
+                    if f't{i}' in result:
+                        has_gauges = True
+                        break
+        
+        # Show results
+        for result in self.results:
+            self.results_text.insert(tk.END, f"=== Page {result.get('page', '?')} ===\n")
+            
+            if 'error' in result:
+                self.results_text.insert(tk.END, f"ERROR: {result['error']}\n")
+            else:
+                for key, value in sorted(result.items()):
+                    if key != 'page':
+                        self.results_text.insert(tk.END, f"{key}: {value}\n")
+            
+            self.results_text.insert(tk.END, "\n")
+        
+        self.results_text.config(state=tk.DISABLED)
+        
+        # Show gauge verification dialog if we have gauges
+        if has_gauges and len(self.results) > 0:
+            self.root.after(500, self.show_gauge_verification)
+    
+    
+    def show_gauge_verification(self):
+        """Show dialog to verify and edit gauge readings"""
+        if not self.results or 'error' in self.results[-1]:
+            return
+        
+        last_result = self.results[-1]
+        
+        # Create verification window
+        verify_win = tk.Toplevel(self.root)
+        verify_win.title("Verify Gauge Readings")
+        verify_win.geometry("700x500")
+        verify_win.resizable(False, False)
+        
+        # Header
+        header = tk.Label(verify_win, text="Review Hand-Written Gauge Readings",
+                         font=("Arial", 12, "bold"), bg=self.bg_header, fg=self.text_light)
+        header.pack(fill=tk.X, padx=0, pady=0)
+        
+        # Instructions
+        instr = tk.Label(verify_win, text="Edit any incorrect readings. Top row: 9 gauges | Bottom row: 10 gauges",
+                        font=("Arial", 9), fg="#666666")
+        instr.pack(pady=10)
+        
+        # Gauge entries frame
+        gauge_frame = tk.Frame(verify_win)
+        gauge_frame.pack(fill=tk.BOTH, expand=True, padx=15, pady=10)
+        
+        gauge_entries = {}
+        
+        # Top row (9 gauges)
+        top_row = tk.Frame(gauge_frame)
+        top_row.pack(fill=tk.X, pady=(0, 15))
+        
+        tk.Label(top_row, text="Top Row (t1-t9):", font=("Arial", 9, "bold")).pack(anchor=tk.W)
+        
+        top_grid = tk.Frame(top_row)
+        top_grid.pack(fill=tk.X)
+        
+        for i in range(1, 10):
+            col = tk.Frame(top_grid)
+            col.pack(side=tk.LEFT, padx=5)
+            
+            tk.Label(col, text=f"t{i}", font=("Arial", 8, "bold")).pack()
+            entry = tk.Entry(col, width=8, font=("Arial", 9))
+            entry.pack()
+            entry.insert(0, str(last_result.get(f't{i}', '')))
+            gauge_entries[f't{i}'] = entry
+        
+        # Bottom row (10 gauges)
+        bottom_row = tk.Frame(gauge_frame)
+        bottom_row.pack(fill=tk.X)
+        
+        tk.Label(bottom_row, text="Bottom Row (t10-t19):", font=("Arial", 9, "bold")).pack(anchor=tk.W)
+        
+        bottom_grid = tk.Frame(bottom_row)
+        bottom_grid.pack(fill=tk.X)
+        
+        for i in range(10, 20):
+            col = tk.Frame(bottom_grid)
+            col.pack(side=tk.LEFT, padx=5)
+            
+            tk.Label(col, text=f"t{i}", font=("Arial", 8, "bold")).pack()
+            entry = tk.Entry(col, width=8, font=("Arial", 9))
+            entry.pack()
+            entry.insert(0, str(last_result.get(f't{i}', '')))
+            gauge_entries[f't{i}'] = entry
+        
+        # Buttons
+        button_frame = tk.Frame(verify_win)
+        button_frame.pack(fill=tk.X, padx=15, pady=15)
+        
+        def save_gauges():
+            """Save corrected gauge values"""
+            for key, entry in gauge_entries.items():
+                last_result[key] = entry.get().strip()
+            
+            # Update display
+            self.display_results()
+            verify_win.destroy()
+            messagebox.showinfo("Success", "Gauge readings saved!")
+        
+        save_btn = tk.Button(button_frame, text="Save Corrections",
+                            command=save_gauges, font=("Arial", 10, "bold"),
+                            bg=self.accent_green, fg="white", relief=tk.FLAT, bd=0,
+                            padx=20, pady=8, cursor="hand2")
+        save_btn.pack(side=tk.LEFT, padx=(0, 10))
+        
+        cancel_btn = tk.Button(button_frame, text="Cancel",
+                              command=verify_win.destroy, font=("Arial", 10),
+                              bg="#f0f0f0", fg=self.text_dark, relief=tk.FLAT, bd=0,
+                              padx=20, pady=8, cursor="hand2")
+        cancel_btn.pack(side=tk.LEFT)
+        """Export to CSV"""
+        if not self.results:
+            messagebox.showerror("Error", "No results to export")
+            return
+        
+        file_path = filedialog.asksaveasfilename(
+            defaultextension=".csv",
+            filetypes=[("CSV files", "*.csv")]
+        )
+        
+        if not file_path:
+            return
+        
+        try:
+            import csv
+            with open(file_path, 'w', newline='') as f:
+                if self.results:
+                    all_keys = set()
+                    for result in self.results:
+                        all_keys.update(result.keys())
+                    all_keys = sorted(list(all_keys))
+                    
+                    writer = csv.DictWriter(f, fieldnames=all_keys)
+                    writer.writeheader()
+                    writer.writerows(self.results)
+            
+            messagebox.showinfo("Success", f"Exported to {Path(file_path).name}")
+            self.status_var.set("Exported to CSV")
+        
+        except Exception as e:
+            messagebox.showerror("Error", f"Export failed: {e}")
+    
+    def export_json(self):
+        """Export to JSON"""
+        if not self.results:
+            messagebox.showerror("Error", "No results to export")
+            return
+        
+        file_path = filedialog.asksaveasfilename(
+            defaultextension=".json",
+            filetypes=[("JSON files", "*.json")]
+        )
+        
+        if not file_path:
+            return
+        
+        try:
+            with open(file_path, 'w') as f:
+                json.dump(self.results, f, indent=2)
+            
+            messagebox.showinfo("Success", f"Exported to {Path(file_path).name}")
+            self.status_var.set("Exported to JSON")
+        
+        except Exception as e:
+            messagebox.showerror("Error", f"Export failed: {e}")
 
-  progBar.style.width='100%';
-  progLabel.textContent='? Done! All certs processed. Review each tab and edit as needed.';
-  btn.disabled=false;btn.textContent='? Auto-Fill All';
-  showBanner('? All certs processed -- review tabs and edit as needed');
-  setTimeout(()=>progWrap.classList.remove('visible'),4000);
-}
-
-// -- SAVE ALL DRAFT --
-function saveAllDraft(){
-  if(activeTabId){const cur=tabs.find(t=>t.id===activeTabId);if(cur)cur.data=readForm();}
-  try{localStorage.setItem('jr_certs_v5',JSON.stringify(tabs.map(t=>({id:t.id,name:t.name,status:t.status==='processing'?'pending':t.status,data:t.data}))));showBanner('? All '+tabs.length+' certs saved');}
-  catch(e){showBanner('? Could not save','#c0392b');}
-}
-function loadDraft(){
-  try{
-    const raw=localStorage.getItem('jr_certs_v5');
-    if(!raw)return;
-    const saved=JSON.parse(raw);
-    tabs=saved.map(s=>({...s,file:null}));
-    if(tabs.length){activeTabId=tabs[0].id;switchTab(activeTabId);}
-    renderTabs();updateUI();
-    showBanner('? Draft restored -- '+tabs.length+' cert'+(tabs.length!==1?'s':''));
-  }catch(e){}
-}
-
-// -- BUILD CERT HTML FOR PRINTING --
-function buildCertHTML(data){
-  const f=id=>data[id]||'';
-  const T=['t1','t2','t3','t4','t5','t6','t7','t8','t9','t10'];
-  const T2=['t11','t12','t13','t14','t15','t16','t17','t18','t19','t20'];
-  return `<div style="font-family:'Special Elite',serif;background:#f5f0e8;padding:30px 38px;width:760px;font-size:13px;color:#1a1410;line-height:1.5;">
-  <div style="text-align:center;border-bottom:3px double #1a1410;padding-bottom:8px;margin-bottom:12px;">
-    <div style="font-size:20px;letter-spacing:3px;text-transform:uppercase;text-decoration:underline;">Supplier Test &amp; Certification Record</div>
-    <div style="font-family:monospace;font-size:9px;margin-top:2px;">JR-3 REV(9) ? 2/15/17</div>
-    <div style="font-size:14px;margin-top:5px;">JR Plastics Corporation</div>
-    <div style="font-family:monospace;font-size:9px;">5111 South Pine Avenue ? Suite "G" ? Ocala, FL 34480</div>
-  </div>
-  <table style="width:100%;border-collapse:collapse;margin-bottom:8px;">
-    <tr>
-      <td style="padding:2px 5px;width:25%;"><b>PO#</b> ${f('po_number')}</td>
-      <td style="padding:2px 5px;width:20%;"><b>Pallet#</b> ${f('pallet_number')}</td>
-      <td style="padding:2px 5px;width:25%;"><b>Railcar#</b> ${f('railcar_number')}</td>
-      <td style="padding:2px 5px;width:30%;"><b>Date</b> ${f('date')}</td>
-    </tr>
-    <tr>
-      <td style="padding:2px 5px;"><b>Pieces</b> ${f('pieces')}</td>
-      <td style="padding:2px 5px;"><b>Packer</b> ${f('packer')}</td>
-      <td colspan="2" style="padding:2px 5px;"><b>Operator</b> ${f('operator')}</td>
-    </tr>
-  </table>
-  <div style="font-size:10px;font-family:monospace;background:rgba(0,0,0,.04);padding:5px 9px;border-left:3px solid #8a7a6a;margin-bottom:7px;"><b>Tolerances:</b>  1/4 "->.242-.257 |  3/8 "->.334-.354 |  1/2 "->.455-.483 |  3/4 "->.697-.740 | 1"->.940-.998</div>
-  <div style="font-family:monospace;font-size:10px;margin-bottom:3px;"><b>THICKNESS -- ROW 1:</b></div>
-  <table style="width:100%;border-collapse:collapse;margin-bottom:7px;">
-    <tr>${T.map(id=>`<td style="border:1px solid #b0a090;text-align:center;padding:5px;width:10%;font-size:14px;">${f(id)}</td>`).join('')}</tr>
-  </table>
-  <div style="font-family:monospace;font-size:10px;margin-bottom:3px;"><b>THICKNESS -- ROW 2:</b></div>
-  <table style="width:100%;border-collapse:collapse;margin-bottom:10px;">
-    <tr>${T2.map(id=>`<td style="border:1px solid #b0a090;text-align:center;padding:5px;width:10%;font-size:14px;">${f(id)}</td>`).join('')}</tr>
-  </table>
-  <table style="width:100%;border-collapse:collapse;margin-bottom:8px;">
-    <tr>
-      <td style="padding:2px 5px;"><b>Length</b> ${f('length')}</td>
-      <td style="padding:2px 5px;"><b>Width</b> ${f('width')}</td>
-      <td style="padding:2px 5px;"><b>Squareness</b> ${f('squareness')}</td>
-    </tr>
-    <tr>
-      <td style="padding:2px 5px;"><b>Wings</b> ${f('wings')}</td>
-      <td style="padding:2px 5px;"><b>UV Additives</b> ${f('uv_additives')}</td>
-      <td style="padding:2px 5px;"><b>Reprocessed</b> ${f('reprocessed')}</td>
-    </tr>
-    <tr>
-      <td style="padding:2px 5px;"><b>Surface Finish</b> ${f('surface_finish')}</td>
-      <td style="padding:2px 5px;"><b>Shrinkage</b> ${f('shrinkage')}</td>
-      <td style="padding:2px 5px;"><b>Color</b> ${f('color')}</td>
-    </tr>
-  </table>
-  <table style="width:100%;border-collapse:collapse;margin-bottom:8px;">
-    <tr>
-      <td style="padding:2px 5px;"><b>Labels</b> ${f('labels')||'YES'}</td>
-      <td style="padding:2px 5px;"><b>Weld Top</b> ${f('weld_top')||'YES'}</td>
-      <td style="padding:2px 5px;"><b>Weld Mid</b> ${f('weld_mid')||'YES'}</td>
-      <td style="padding:2px 5px;"><b>Weld Bot</b> ${f('weld_bot')||'YES'}</td>
-      <td style="padding:2px 5px;"><b>Spark Test</b> ${f('spark')||'PASS'}</td>
-    </tr>
-  </table>
-  <table style="width:100%;border-collapse:collapse;border-top:1px dashed #8a7a6a;padding-top:6px;margin-top:4px;">
-    <tr>
-      <td style="padding:3px 5px;"><b>Surface Quality</b> ${f('surface_quality')||'Good'}</td>
-      <td style="padding:3px 5px;"><b>Packaging</b> ${f('packaging')||'Good'}</td>
-      <td style="padding:3px 5px;"><b>Final QC</b> ${f('final_qc')||'A'}</td>
-      <td style="padding:3px 5px;"><b>QC Date</b> ${f('qc_date')}</td>
-    </tr>
-    <tr>
-      <td colspan="2" style="padding:3px 5px;"><b>UPF Receiver</b> ${f('upf_receiver')}</td>
-      <td style="padding:3px 5px;"><b>Recv Date</b> ${f('recv_date')}</td>
-      <td style="padding:3px 5px;"><b>Time</b> ${f('recv_time')}</td>
-    </tr>
-  </table>
-</div>`;
-}
-
-// -- DOWNLOAD ALL AS PDF --
-async function printAll(){
-  if(!tabs.length)return;
-  if(activeTabId){const cur=tabs.find(t=>t.id===activeTabId);if(cur)cur.data=readForm();}
-  const originalTabId=activeTabId;
-
-  const btn=document.getElementById('btn-printall');
-  btn.textContent='? Generating...';btn.disabled=true;
-
-  const overlay=document.createElement('div');
-  overlay.style.cssText='position:fixed;inset:0;background:rgba(20,14,10,.94);z-index:9999;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:14px;';
-  const overlayMsg=document.createElement('div');
-  overlayMsg.style.cssText='font-family:monospace;color:#e8d5b0;font-size:14px;letter-spacing:2px;text-align:center;';
-  overlayMsg.textContent='? Starting...';
-  const overlaySub=document.createElement('div');
-  overlaySub.style.cssText='font-family:monospace;color:#6a5a4a;font-size:10px;letter-spacing:1px;';
-  overlaySub.textContent='Do not close this tab';
-  overlay.appendChild(overlayMsg);overlay.appendChild(overlaySub);
-  document.body.appendChild(overlay);
-
-  try{
-    const {jsPDF}=window.jspdf;
-    const pdf=new jsPDF({unit:'mm',format:'letter',orientation:'portrait'});
-    const pageW=pdf.internal.pageSize.getWidth();
-    const pageH=pdf.internal.pageSize.getHeight();
-    const paper=document.querySelector('.paper');
-
-    for(let i=0;i<tabs.length;i++){
-      overlayMsg.textContent=`? Rendering ${i+1} of ${tabs.length}...`;
-
-      // Write this tab's data into the visible form
-      writeForm(tabs[i].data);
-
-      await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
-      await new Promise(r=>setTimeout(r,150));
-
-      // Replace all inputs with styled spans so html2canvas captures the values
-      const inputs=paper.querySelectorAll('input[type=text],input[type=date],input[type=time]');
-      const replacements=[];
-      inputs.forEach(inp=>{
-        const span=document.createElement('span');
-        span.style.cssText=`display:block;font-family:'Special Elite',serif;font-size:15px;color:#1a1410;
-          padding:4px 4px 2px;border-bottom:1.5px solid #b0a090;min-height:26px;
-          width:100%;letter-spacing:0.5px;word-break:break-word;`;
-        span.textContent=inp.value||'';
-        inp.parentNode.insertBefore(span,inp);
-        inp.style.display='none';
-        replacements.push({inp,span});
-      });
-
-      await new Promise(r=>setTimeout(r,100));
-
-      const canvas=await html2canvas(paper,{
-        scale:2,
-        useCORS:true,
-        backgroundColor:'#f5f0e8',
-        logging:false,
-        scrollX:0,
-        scrollY:0
-      });
-
-      // Restore inputs
-      replacements.forEach(({inp,span})=>{
-        inp.style.display='';
-        span.remove();
-      });
-
-      const imgData=canvas.toDataURL('image/jpeg',0.97);
-      const ratio=canvas.height/canvas.width;
-      const imgH=pageW*ratio;
-
-      if(i>0)pdf.addPage();
-      pdf.addImage(imgData,'JPEG',0,0,pageW,Math.min(imgH,pageH));
-    }
-
-    // Restore original tab
-    const orig=tabs.find(t=>t.id===originalTabId);
-    if(orig){writeForm(orig.data);activeTabId=originalTabId;renderTabs();}
-
-    overlayMsg.textContent='? Saving file...';
-    pdf.save('JR_Plastics_All_Certs.pdf');
-    showBanner('? '+tabs.length+' cert'+(tabs.length!==1?'s':'')+' downloaded');
-  }catch(e){
-    console.error('PDF error:',e);
-    showBanner('? PDF error: '+e.message,'#c0392b');
-    const orig=tabs.find(t=>t.id===originalTabId);
-    if(orig){writeForm(orig.data);activeTabId=originalTabId;renderTabs();}
-  }
-
-  document.body.removeChild(overlay);
-  btn.textContent='? Download All PDF';btn.disabled=false;
-}
-
-// -- APPLY PO# TO ALL CERTS --
-function applyPOToAll(){
-  // Save current form first
-  if(activeTabId){const cur=tabs.find(t=>t.id===activeTabId);if(cur)cur.data=readForm();}
-  const po=document.getElementById('po_number').value.trim();
-  if(!po){showBanner('? Enter a PO# first','#c0392b');return;}
-  tabs.forEach(tab=>{tab.data.po_number=po;});
-  // Refresh visible form
-  if(activeTabId){const cur=tabs.find(t=>t.id===activeTabId);if(cur)writeForm(cur.data);}
-  showBanner('? PO# "'+po+'" applied to all '+tabs.length+' cert'+(tabs.length!==1?'s':''));
-}
-
-// -- INIT --
-loadDraft();
-if(!tabs.length)renderTabs();
-updateUI();
-</script>
-</body>
-</html>
+if __name__ == "__main__":
+    root = tk.Tk()
+    app = JRPlasticsProApp(root)
+    root.mainloop()
