@@ -6,51 +6,97 @@
   <title>JR Plastics Certificate Processor</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f0e8; }
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f0e8; color: #2c2c2c; }
     
-    .header { background: #1a1410; color: #e8d5b0; padding: 20px 30px; }
-    .header h1 { font-size: 28px; font-weight: 600; }
-    .header p { font-size: 12px; color: #a0a0a0; margin-top: 5px; }
+    .header { background: #1a1410; color: #e8d5b0; padding: 25px 40px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    .header h1 { font-size: 32px; font-weight: 700; letter-spacing: -0.5px; }
+    .header p { font-size: 13px; color: #a0a0a0; margin-top: 8px; font-weight: 400; }
     
-    .container { display: flex; max-width: 1400px; margin: 0 auto; padding: 30px; gap: 30px; }
-    .sidebar { flex: 0 0 400px; }
-    .main { flex: 1; }
+    .container { display: flex; max-width: 1500px; margin: 0 auto; padding: 30px 20px; gap: 30px; }
+    .sidebar { flex: 0 0 420px; }
+    .main { flex: 1; min-width: 0; }
     
-    .card { background: white; border-radius: 8px; padding: 0; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-    .card-header { background: #1a1410; color: #e8d5b0; padding: 15px 20px; border-radius: 8px 8px 0 0; font-weight: 600; font-size: 14px; }
+    .card { background: white; border-radius: 6px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.08); margin-bottom: 20px; }
+    .card-header { background: #1a1410; color: #e8d5b0; padding: 16px 20px; font-weight: 600; font-size: 13px; letter-spacing: 0.5px; }
     .card-body { padding: 20px; }
     
-    label { display: block; font-size: 12px; font-weight: 600; color: #666; margin-bottom: 5px; margin-top: 15px; }
-    label:first-child { margin-top: 0; }
+    label { display: block; font-size: 12px; font-weight: 600; color: #555; margin: 15px 0 8px 0; letter-spacing: 0.3px; }
+    label:first-of-type { margin-top: 0; }
     
-    input[type="text"], input[type="password"] { width: 100%; padding: 10px 12px; border: 1px solid #e0e0e0; border-radius: 4px; font-size: 14px; font-family: monospace; }
-    input[type="text"]:focus, input[type="password"]:focus { outline: none; border-color: #2a6a3e; }
+    input[type="text"], input[type="password"] { 
+      width: 100%; 
+      padding: 11px 13px; 
+      border: 1px solid #d0d0d0; 
+      border-radius: 4px; 
+      font-size: 14px; 
+      font-family: 'Courier New', monospace;
+      background: #fafafa;
+      transition: all 0.2s;
+    }
+    input[type="text"]:focus, input[type="password"]:focus { 
+      outline: none; 
+      border-color: #2a6a3e; 
+      background: white;
+      box-shadow: 0 0 0 3px rgba(42, 106, 62, 0.1);
+    }
     
-    button { background: #2a6a3e; color: white; border: none; padding: 12px 20px; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: 600; margin-top: 10px; transition: background 0.2s; }
-    button:hover { background: #40c070; }
-    button:disabled { background: #ccc; cursor: not-allowed; }
+    button { 
+      background: #2a6a3e; 
+      color: white; 
+      border: none; 
+      padding: 12px 20px; 
+      border-radius: 4px; 
+      cursor: pointer; 
+      font-size: 14px; 
+      font-weight: 600;
+      margin-top: 12px;
+      transition: background 0.2s, box-shadow 0.2s;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+    }
+    button:hover:not(:disabled) { 
+      background: #40c070;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+    }
+    button:active:not(:disabled) { transform: scale(0.98); }
+    button:disabled { 
+      background: #ccc; 
+      cursor: not-allowed;
+      box-shadow: none;
+    }
     
     .button-group { display: flex; gap: 10px; margin-top: 15px; }
     .button-group button { flex: 1; margin-top: 0; }
     
-    .progress-container { margin-top: 15px; }
-    .progress-bar { width: 100%; height: 8px; background: #e0e0e0; border-radius: 4px; overflow: hidden; }
-    .progress-fill { height: 100%; background: #2a6a3e; width: 0%; transition: width 0.3s; }
-    .progress-text { font-size: 12px; color: #666; margin-top: 8px; }
+    .progress-container { margin-top: 15px; display: none; }
+    .progress-bar { width: 100%; height: 6px; background: #e0e0e0; border-radius: 3px; overflow: hidden; }
+    .progress-fill { height: 100%; background: #2a6a3e; width: 0%; transition: width 0.3s ease; }
+    .progress-text { font-size: 12px; color: #666; margin-top: 10px; font-weight: 500; }
     
-    .results { background: white; border-radius: 8px; padding: 20px; min-height: 400px; max-height: 600px; overflow-y: auto; font-family: monospace; font-size: 12px; line-height: 1.6; color: #2c2c2c; }
+    .results-container { background: white; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); padding: 0; display: flex; flex-direction: column; height: 500px; }
+    .results-header { background: #1a1410; color: #e8d5b0; padding: 16px 20px; font-weight: 600; font-size: 13px; }
+    .results { flex: 1; overflow-y: auto; padding: 20px; font-family: 'Courier New', monospace; font-size: 12px; line-height: 1.5; }
+    
     .results .page { margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid #e0e0e0; }
-    .results .page:last-child { border-bottom: none; }
-    .results .page-title { font-weight: bold; color: #1a1410; margin-bottom: 10px; }
-    .results .error { color: #c0392b; }
-    .results .field { margin: 5px 0; }
-    .results .key { color: #2a6a3e; font-weight: bold; }
+    .results .page:last-child { border-bottom: none; margin-bottom: 0; }
+    .results .page-title { font-weight: bold; color: #1a1410; margin-bottom: 8px; }
+    .results .error { color: #c0392b; font-weight: 600; }
+    .results .field { margin: 4px 0; display: flex; }
+    .results .key { color: #2a6a3e; font-weight: 600; margin-right: 8px; min-width: 140px; }
+    .results .value { color: #333; word-break: break-all; }
     
-    .status-bar { background: #2c2c2c; color: #e0e0e0; padding: 10px 30px; font-size: 12px; }
+    .status-bar { background: #2c2c2c; color: #e0e0e0; padding: 12px 40px; font-size: 12px; font-weight: 500; }
     
-    .info-text { font-size: 12px; color: #666; margin-bottom: 10px; }
-    .link { color: #2a6a3e; text-decoration: none; }
+    .info-text { font-size: 12px; color: #666; margin-bottom: 12px; line-height: 1.4; }
+    .link { color: #2a6a3e; text-decoration: none; font-weight: 600; }
     .link:hover { text-decoration: underline; }
+    
+    .hidden { display: none !important; }
+    
+    @media (max-width: 1024px) {
+      .container { flex-direction: column; }
+      .sidebar { flex: none; width: 100%; }
+      .main { flex: none; width: 100%; }
+    }
   </style>
 </head>
 <body>
@@ -67,10 +113,10 @@
     <div class="card">
       <div class="card-header">Anthropic API Key</div>
       <div class="card-body">
-        <p class="info-text">Get key at: <a href="https://console.anthropic.com/keys" target="_blank" class="link">console.anthropic.com/keys</a></p>
+        <p class="info-text">Get your API key at:<br><a href="https://console.anthropic.com/keys" target="_blank" class="link">console.anthropic.com/keys</a></p>
         <label>API Key:</label>
         <input type="password" id="api-key-input" placeholder="sk-ant-..." autocomplete="off">
-        <button onclick="saveApiKey()">Save API Key</button>
+        <button onclick="saveApiKey()" style="width: 100%; margin-top: 10px;">Save API Key</button>
       </div>
     </div>
     
@@ -79,7 +125,7 @@
       <div class="card-header">Select PDF File</div>
       <div class="card-body">
         <button onclick="chooseFile()" style="width: 100%;">Choose PDF File</button>
-        <p class="info-text" style="margin-top: 10px;">
+        <p class="info-text" style="margin-top: 12px;">
           <span id="file-name">No file selected</span>
         </p>
       </div>
@@ -91,7 +137,7 @@
       <div class="card-body">
         <button id="process-btn" onclick="processAll()" style="width: 100%;">Process All Pages</button>
         
-        <div class="progress-container" style="display: none;" id="progress-container">
+        <div class="progress-container" id="progress-container">
           <div class="progress-bar">
             <div class="progress-fill" id="progress-fill"></div>
           </div>
@@ -108,26 +154,26 @@
   </div>
   
   <div class="main">
-    <div class="card" style="margin-bottom: 0;">
-      <div class="card-header">Results Preview</div>
-      <div class="results" id="results"></div>
+    <div class="results-container">
+      <div class="results-header">Results Preview</div>
+      <div class="results" id="results">No results yet. Select a PDF and process to see results.</div>
     </div>
   </div>
 </div>
 
 <div class="status-bar">
-  <span id="status">Ready</span>
+  <span id="status">Ready to process certificates</span>
 </div>
 
 <script>
 const config = {
   apiKey: '',
-  pdfPath: '',
+  pdfFile: null,
   results: [],
   isProcessing: false
 };
 
-// Load saved API key
+// Load saved API key on page load
 window.addEventListener('load', () => {
   const saved = localStorage.getItem('anthropic_api_key');
   if (saved) {
@@ -142,9 +188,13 @@ function saveApiKey() {
     alert('Please enter your Anthropic API key');
     return;
   }
+  if (!key.startsWith('sk-ant-')) {
+    alert('API key should start with sk-ant-');
+    return;
+  }
   config.apiKey = key;
   localStorage.setItem('anthropic_api_key', key);
-  alert('API key saved!');
+  alert('API key saved securely!');
   updateStatus('API key saved');
 }
 
@@ -153,43 +203,48 @@ function chooseFile() {
   input.type = 'file';
   input.accept = '.pdf';
   input.onchange = (e) => {
-    config.pdfPath = e.target.files[0];
-    document.getElementById('file-name').textContent = config.pdfPath.name;
-    updateStatus(`Loaded: ${config.pdfPath.name}`);
+    config.pdfFile = e.target.files[0];
+    if (config.pdfFile) {
+      document.getElementById('file-name').textContent = config.pdfFile.name;
+      updateStatus(`Loaded: ${config.pdfFile.name}`);
+    }
   };
   input.click();
 }
 
 async function pdfToImages(file) {
-  const pdfjsLib = window.pdfjsLib || await loadPdfJs();
+  // Load PDF.js library
+  if (!window.pdfjsLib) {
+    const script = document.createElement('script');
+    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+    await new Promise(resolve => {
+      script.onload = resolve;
+      document.head.appendChild(script);
+    });
+    window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  }
+
   const arrayBuffer = await file.arrayBuffer();
-  const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
+  const pdf = await window.pdfjsLib.getDocument(arrayBuffer).promise;
   
   const images = [];
   for (let i = 1; i <= pdf.numPages; i++) {
     const page = await pdf.getPage(i);
-    const canvas = document.createElement('canvas');
     const viewport = page.getViewport({ scale: 2 });
+    const canvas = document.createElement('canvas');
     canvas.width = viewport.width;
     canvas.height = viewport.height;
     
-    await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+    await page.render({
+      canvasContext: canvas.getContext('2d'),
+      viewport: viewport
+    }).promise;
+    
     const imageData = canvas.toDataURL('image/jpeg').replace('data:image/jpeg;base64,', '');
     images.push(imageData);
   }
+  
   return images;
-}
-
-async function loadPdfJs() {
-  return new Promise((resolve) => {
-    const script = document.createElement('script');
-    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
-    script.onload = () => {
-      window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-      resolve(window.pdfjsLib);
-    };
-    document.head.appendChild(script);
-  });
 }
 
 async function extractData(imageBase64) {
@@ -197,23 +252,28 @@ async function extractData(imageBase64) {
     throw new Error('No Anthropic API key configured');
   }
 
-  const response = await fetch('/.netlify/functions/extract', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ imageBase64 })
-  });
+  try {
+    const response = await fetch('/.netlify/functions/extract', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ imageBase64 })
+    });
 
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || `Server error ${response.status}`);
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || `Server error ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Extraction error:', error);
+    throw error;
   }
-
-  const data = await response.json();
-  return data;
 }
 
 async function processAll() {
-  if (!config.pdfPath) {
+  if (!config.pdfFile) {
     alert('Please select a PDF file first');
     return;
   }
@@ -233,10 +293,11 @@ async function processAll() {
 
   try {
     updateStatus('Converting PDF to images...');
-    const images = await pdfToImages(config.pdfPath);
+    const images = await pdfToImages(config.pdfFile);
     
     document.getElementById('progress-fill').style.width = '0%';
-    document.getElementById('progress-fill').parentElement.parentElement.style.maxWidth = images.length > 0 ? '100%' : '0';
+    const resultsDiv = document.getElementById('results');
+    resultsDiv.innerHTML = '';
 
     for (let i = 0; i < images.length; i++) {
       updateProgress(i, images.length, `Processing page ${i + 1} of ${images.length}...`);
@@ -250,14 +311,14 @@ async function processAll() {
       }
 
       if (i < images.length - 1) {
-        await new Promise(r => setTimeout(r, 2000));
+        await new Promise(r => setTimeout(r, 1000));
       }
     }
 
-    updateProgress(images.length, images.length, 'Complete!');
+    updateProgress(images.length, images.length, 'Processing complete!');
     displayResults();
-    alert(`Processed ${images.length} pages`);
-    updateStatus(`Successfully processed ${images.length} pages`);
+    alert(`Successfully processed ${images.length} page(s)`);
+    updateStatus(`Processed ${images.length} pages`);
   } catch (e) {
     alert(`Error: ${e.message}`);
     updateStatus(`Error: ${e.message}`);
@@ -277,6 +338,11 @@ function displayResults() {
   const resultsDiv = document.getElementById('results');
   resultsDiv.innerHTML = '';
 
+  if (config.results.length === 0) {
+    resultsDiv.innerHTML = '<p style="color: #999;">No results to display</p>';
+    return;
+  }
+
   config.results.forEach(result => {
     const pageDiv = document.createElement('div');
     pageDiv.className = 'page';
@@ -286,16 +352,22 @@ function displayResults() {
     if (result.error) {
       html += `<div class="error">ERROR: ${result.error}</div>`;
     } else {
-      for (const [key, value] of Object.entries(result)) {
-        if (key !== 'page') {
-          html += `<div class="field"><span class="key">${key}:</span> ${value}</div>`;
-        }
-      }
+      const keys = Object.keys(result).filter(k => k !== 'page').sort();
+      keys.forEach(key => {
+        const value = result[key] || '';
+        html += `<div class="field"><span class="key">${key}:</span> <span class="value">${escapeHtml(value)}</span></div>`;
+      });
     }
     
     pageDiv.innerHTML = html;
     resultsDiv.appendChild(pageDiv);
   });
+}
+
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
 }
 
 function exportCSV() {
@@ -305,23 +377,27 @@ function exportCSV() {
   }
 
   const allKeys = new Set();
-  config.results.forEach(r => Object.keys(r).forEach(k => allKeys.add(k)));
-  const keys = Array.from(allKeys).sort();
+  config.results.forEach(r => {
+    Object.keys(r).forEach(k => {
+      if (k !== 'page' && k !== 'error') allKeys.add(k);
+    });
+  });
+  const keys = ['page', ...Array.from(allKeys).sort()];
 
   let csv = keys.join(',') + '\n';
   config.results.forEach(result => {
-    csv += keys.map(k => {
+    const row = keys.map(k => {
       const v = result[k] || '';
       return `"${String(v).replace(/"/g, '""')}"`;
-    }).join(',') + '\n';
+    });
+    csv += row.join(',') + '\n';
   });
 
-  const blob = new Blob([csv], { type: 'text/csv' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = 'results.csv';
-  a.click();
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = `jr-plastics-results-${new Date().toISOString().split('T')[0]}.csv`;
+  link.click();
   updateStatus('Exported to CSV');
 }
 
@@ -332,11 +408,10 @@ function exportJSON() {
   }
 
   const blob = new Blob([JSON.stringify(config.results, null, 2)], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = 'results.json';
-  a.click();
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = `jr-plastics-results-${new Date().toISOString().split('T')[0]}.json`;
+  link.click();
   updateStatus('Exported to JSON');
 }
 
