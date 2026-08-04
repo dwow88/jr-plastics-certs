@@ -90,6 +90,8 @@
     .link { color: #2a6a3e; text-decoration: none; font-weight: 600; }
     .link:hover { text-decoration: underline; }
     
+    .warning { background: #fffbea; border: 1px solid #f0e0a0; border-radius: 4px; padding: 10px; margin-bottom: 12px; font-size: 12px; color: #8b7c3a; }
+    
     .hidden { display: none !important; }
     
     @media (max-width: 1024px) {
@@ -109,13 +111,16 @@
 <div class="container">
   <div class="sidebar">
     
-    <!-- Anthropic API Key -->
+    <!-- Groq API Key -->
     <div class="card">
-      <div class="card-header">Anthropic API Key</div>
+      <div class="card-header">Groq API Key</div>
       <div class="card-body">
-        <p class="info-text">Get your API key at:<br><a href="https://console.anthropic.com/keys" target="_blank" class="link">console.anthropic.com/keys</a></p>
+        <p class="info-text">Get your free Groq API key at:<br><a href="https://console.groq.com/keys" target="_blank" class="link">console.groq.com/keys</a></p>
+        <div class="warning">
+          Note: Free tier has rate limits (~30 requests/minute). For unlimited processing, upgrade to paid tier.
+        </div>
         <label>API Key:</label>
-        <input type="password" id="api-key-input" placeholder="sk-ant-..." autocomplete="off">
+        <input type="password" id="api-key-input" placeholder="gsk_..." autocomplete="off">
         <button onclick="saveApiKey()" style="width: 100%; margin-top: 10px;">Save API Key</button>
       </div>
     </div>
@@ -175,7 +180,7 @@ const config = {
 
 // Load saved API key on page load
 window.addEventListener('load', () => {
-  const saved = localStorage.getItem('anthropic_api_key');
+  const saved = localStorage.getItem('groq_api_key');
   if (saved) {
     document.getElementById('api-key-input').value = saved;
     config.apiKey = saved;
@@ -185,15 +190,15 @@ window.addEventListener('load', () => {
 function saveApiKey() {
   const key = document.getElementById('api-key-input').value.trim();
   if (!key) {
-    alert('Please enter your Anthropic API key');
+    alert('Please enter your Groq API key');
     return;
   }
-  if (!key.startsWith('sk-ant-')) {
-    alert('API key should start with sk-ant-');
+  if (!key.startsWith('gsk_')) {
+    alert('API key should start with gsk_');
     return;
   }
   config.apiKey = key;
-  localStorage.setItem('anthropic_api_key', key);
+  localStorage.setItem('groq_api_key', key);
   alert('API key saved securely!');
   updateStatus('API key saved');
 }
@@ -249,7 +254,7 @@ async function pdfToImages(file) {
 
 async function extractData(imageBase64) {
   if (!config.apiKey) {
-    throw new Error('No Anthropic API key configured');
+    throw new Error('No Groq API key configured');
   }
 
   try {
@@ -278,7 +283,7 @@ async function processAll() {
     return;
   }
   if (!config.apiKey) {
-    alert('Please save your Anthropic API key first');
+    alert('Please save your Groq API key first');
     return;
   }
   if (config.isProcessing) {
@@ -310,8 +315,9 @@ async function processAll() {
         config.results.push({ page: i + 1, error: e.message });
       }
 
+      // Longer delay between requests to avoid rate limiting
       if (i < images.length - 1) {
-        await new Promise(r => setTimeout(r, 1000));
+        await new Promise(r => setTimeout(r, 3000));
       }
     }
 
